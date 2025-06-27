@@ -1,0 +1,12 @@
+preparation:
+  scraping:
+    base_url: "https://understat.com/league"
+    leagues:
+      - EPL
+      - La_liga
+      - Bundesliga
+      - Serie_A
+      - Ligue_1
+    seasons:
+      start: 2014
+      end: 2024

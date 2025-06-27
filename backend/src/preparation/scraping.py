@@ -7,13 +7,19 @@ import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 import time
+import yaml
+from pathlib import Path
 
-# Base URL for Understat
-BASE_URL = "https://understat.com/league"
+# Load configuration from config.yaml
+config_path = Path(__file__).parent.parent / 'config.yaml'
+with open(config_path, 'r') as f:
+    config = yaml.safe_load(f)['preparation']['scraping']
 
-# Define the leagues and seasons to scrape
-LEAGUES = ["EPL", "La_liga", "Bundesliga", "Serie_A", "Ligue_1"]
-SEASONS = list(range(2014, 2025))
+# Configuration constants
+BASE_URL = config['base_url']
+LEAGUES = config['leagues']
+SEASONS = list(range(config['seasons']['start'], config['seasons']['end'] + 1))
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 
 def get_shots_from_match_pages(league_name: str, year: int) -> List[Dict]:
     """
@@ -24,7 +30,7 @@ def get_shots_from_match_pages(league_name: str, year: int) -> List[Dict]:
     # Fetch the league page to find match IDs
     league_url = f"{BASE_URL}/{league_name}/{year}"
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'User-Agent': USER_AGENT
     }
     
     try:
