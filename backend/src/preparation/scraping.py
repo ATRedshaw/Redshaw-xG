@@ -13,7 +13,8 @@ from pathlib import Path
 # Load configuration from config.yaml
 config_path = Path(__file__).parent.parent / 'config.yaml'
 with open(config_path, 'r') as f:
-    config = yaml.safe_load(f)['preparation']['scraping']
+    # Load only the scraping section
+    config = yaml.safe_load(f)['scraping']
 
 # Configuration constants
 BASE_URL = config['base_url']
