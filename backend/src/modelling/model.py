@@ -6,16 +6,18 @@ from skopt.space import Integer, Categorical
 import mlflow
 import mlflow.sklearn
 
-def train_and_log_model(model_name: str, features: list, data: pd.DataFrame, target_col: str):
+def train_and_log_model(model_name: str, features: list, data: pd.DataFrame, target_col: str, registered_model_name: str):
     """
-    Trains a RandomForestClassifier and logs the model, parameters, metrics,
-    and schema to MLflow.
+    Trains a RandomForestClassifier, logs the experiment, and registers the model
+    in the MLflow Model Registry, which handles versioning.
 
     Args:
-        model_name (str): A descriptive name for the model (e.g., 'basic_model').
+        model_name (str): A descriptive name for the model run (e.g., 'basic_model').
         features (list): The list of feature column names to use for training.
         data (pd.DataFrame): The full dataframe containing features and the target.
         target_col (str): The name of the target variable column.
+        registered_model_name (str): The name for the model in the Model Registry.
+                                     MLflow will automatically version models under this name.
     """
     # Start a new MLflow run for this specific model training session.
     with mlflow.start_run(run_name=model_name):
@@ -23,7 +25,6 @@ def train_and_log_model(model_name: str, features: list, data: pd.DataFrame, tar
 
         # Log a tag to easily identify the model type.
         mlflow.set_tag("model_name", model_name)
-        # Log the number of features used as a parameter.
         mlflow.log_param("num_features", len(features))
 
         # Data is prepared for training.
@@ -65,10 +66,8 @@ def train_and_log_model(model_name: str, features: list, data: pd.DataFrame, tar
         print(f"Best score (Brier Score) for {model_name}: {best_score:.4f} (lower is better)")
         print(f"Best parameters: {best_params}")
 
-        # Log the best hyperparameters found by BayesSearchCV.
+        # Log the best hyperparameters and metric to the MLflow run.
         mlflow.log_params(best_params)
-
-        # Log the primary performance metric.
         mlflow.log_metric("brier_score", best_score)
 
         # The feature schema is logged as a dictionary artifact.
@@ -76,14 +75,15 @@ def train_and_log_model(model_name: str, features: list, data: pd.DataFrame, tar
         mlflow.log_dict(schema, "schema.json")
         print(f"Logged schema to MLflow artifact store.")
 
-        # Log the trained model and its signature to MLflow.
-        # This replaces the need for joblib and manual saving.
+        # Log the model and register it, which enables automatic versioning.
+        print(f"Registering model under the name: {registered_model_name}")
         mlflow.sklearn.log_model(
             sk_model=best_model,
             artifact_path="model",
-            input_example=X.head()
+            input_example=X.head(),
+            registered_model_name=registered_model_name
         )
-        print(f"Logged model to MLflow artifact store.")
+        print(f"Logged and Registered model successfully.")
         print(f"--- Finished training for: {model_name} ---\n")
 
 
@@ -91,11 +91,11 @@ def main():
     """
     Main function to orchestrate the loading of data and training of all models.
     """
-    # Project paths are defined
+    # Project paths are defined.
     try:
         project_root = Path(__file__).parent.parent.parent
     except NameError:
-        project_root = Path('.').resolve()
+        project_root = Path('.').resolve().parent
 
     data_path = project_root / 'data' / 'preprocessed' / 'preprocessed_shots.csv'
     
@@ -137,7 +137,7 @@ def main():
         'advanced_model': all_features
     }
 
-    # Each model configuration is iterated through to train and log the model.
+    # Each model configuration is iterated through to train and register the model.
     for name, features in model_configs.items():
         # Verification occurs that all required features for the model exist in the dataframe.
         missing_feats = [feat for feat in features if feat not in df.columns]
@@ -145,11 +145,14 @@ def main():
             print(f"Warning: Missing columns for model '{name}': {missing_feats}. Skipping this model.")
             continue
         
-        # Call the streamlined function. No output path is needed.
-        train_and_log_model(name, features, df, target_variable)
+        # Define a consistent name for the Model Registry.
+        registry_name = f"{name}-xg"
+        
+        # Call the training function, passing the name for the registry.
+        train_and_log_model(name, features, df, target_variable, registry_name)
 
-    print("--- All models have been trained and logged to MLflow. ---")
-    print("Run 'mlflow ui' in your terminal to see the results.")
+    print("--- All models have been trained and registered in MLflow. ---")
+    print("Run 'mlflow ui' and click the 'Models' tab to see your versioned models.")
 
 if __name__ == '__main__':
     main()
