@@ -134,23 +134,6 @@ def create_interaction_terms(df: pd.DataFrame) -> pd.DataFrame:
     # One-hot encode the interaction terms
     return pd.get_dummies(interaction, prefix='interaction')
 
-def get_feature_names() -> List[str]:
-    """
-    Get the expected feature names after preprocessing.
-    This is useful for model interpretation and feature importance analysis.
-    """
-    # This is a simplified version - in practice, you might want to generate
-    # this dynamically based on your actual data
-    return [
-        'X', 'Y', 'distance_to_goal', 'angle_to_goal',
-        'situation_OpenPlay', 'situation_SetPiece',  # Example categories
-        'shotType_RightFoot', 'shotType_LeftFoot', 'shotType_Header',  # Example categories
-        'zone_wide', 'zone_central',
-        # Example interaction terms
-        'interaction_OpenPlay_RightFoot', 'interaction_SetPiece_Header',
-        # Add more as needed
-    ]
-
 def save_preprocessed_data(X: pd.DataFrame, y: pd.Series, output_dir: Path, 
                          filename: str = 'preprocessed_shots.csv') -> Path:
     """
