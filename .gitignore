@@ -1,3 +1,6 @@
 # Can be fetched by running the Jupyter Notebooks.
 backend/data/
 venv/
+
+# Don't commit all the mlflow runs
+backend/mlruns/

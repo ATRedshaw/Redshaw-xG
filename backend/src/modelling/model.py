@@ -1,78 +1,90 @@
 import pandas as pd
-import joblib
-import json
 from pathlib import Path
 from sklearn.ensemble import RandomForestClassifier
 from skopt import BayesSearchCV
 from skopt.space import Integer, Categorical
+import mlflow
+import mlflow.sklearn
 
-def train_and_save_model(model_name: str, features: list, data: pd.DataFrame, target_col: str, output_root: Path):
+def train_and_log_model(model_name: str, features: list, data: pd.DataFrame, target_col: str):
     """
-    Trains a RandomForestClassifier using BayesSearchCV, saves the best model,
-    and its feature schema.
+    Trains a RandomForestClassifier and logs the model, parameters, metrics,
+    and schema to MLflow.
 
     Args:
         model_name (str): A descriptive name for the model (e.g., 'basic_model').
         features (list): The list of feature column names to use for training.
         data (pd.DataFrame): The full dataframe containing features and the target.
         target_col (str): The name of the target variable column.
-        output_root (Path): The root directory to save the model folders to.
     """
-    print(f"--- Starting training for: {model_name} ---")
+    # Start a new MLflow run for this specific model training session.
+    with mlflow.start_run(run_name=model_name):
+        print(f"--- Starting training for: {model_name} ---")
 
-    # Data is prepared for training.
-    X = data[features]
-    y = data[target_col]
-    
-    # The output directory for the current model is created if it does not exist.
-    model_output_dir = output_root / model_name
-    model_output_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Created directory: {model_output_dir}")
+        # Log a tag to easily identify the model type.
+        mlflow.set_tag("model_name", model_name)
+        # Log the number of features used as a parameter.
+        mlflow.log_param("num_features", len(features))
 
-    # Hyperparameter search space.
-    search_spaces = {
-        'n_estimators': Integer(100, 500),
-        'max_depth': Integer(10, 40),
-        'min_samples_split': Integer(2, 20),
-        'min_samples_leaf': Integer(1, 10),
-        'max_features': Categorical(['sqrt', 'log2'])
-    }
+        # Data is prepared for training.
+        X = data[features]
+        y = data[target_col]
 
-    # BayesSearchCV is used for hyperparameter optimization.
-    rf = RandomForestClassifier(random_state=104)
-    bayes_search = BayesSearchCV(
-        estimator=rf,
-        search_spaces=search_spaces,
-        n_iter=15,
-        cv=5,
-        scoring='neg_brier_score',
-        n_jobs=-1,
-        random_state=104,
-        verbose=1,
-        refit=True
-    )
+        # Hyperparameter search space.
+        search_spaces = {
+            'n_estimators': Integer(100, 500),
+            'max_depth': Integer(10, 40),
+            'min_samples_split': Integer(2, 20),
+            'min_samples_leaf': Integer(1, 10),
+            'max_features': Categorical(['sqrt', 'log2'])
+        }
 
-    # Cross-validation is run and the model is fitted using the defined search.
-    print(f"Running BayesSearchCV for {model_name}...")
-    bayes_search.fit(X, y)
+        # BayesSearchCV is used for hyperparameter optimization.
+        rf = RandomForestClassifier(random_state=104)
+        bayes_search = BayesSearchCV(
+            estimator=rf,
+            search_spaces=search_spaces,
+            n_iter=15,
+            cv=5,
+            scoring='neg_brier_score',
+            n_jobs=-1,
+            random_state=104,
+            verbose=1,
+            refit=True
+        )
 
-    # The best estimator is trained on the full data because of `refit=True`.
-    best_model = bayes_search.best_estimator_
-    print(f"Best score (Brier Score) for {model_name}: {-bayes_search.best_score_:.4f} (lower is better)")
-    print(f"Best parameters: {bayes_search.best_params_}")
+        # Cross-validation is run and the model is fitted using the defined search.
+        print(f"Running BayesSearchCV for {model_name}...")
+        bayes_search.fit(X, y)
 
-    # The trained model is saved to a joblib file.
-    model_path = model_output_dir / 'model.joblib'
-    joblib.dump(best_model, model_path)
-    print(f"Saved model to: {model_path}")
+        # The best estimator is trained on the full data because of `refit=True`.
+        best_model = bayes_search.best_estimator_
+        best_score = -bayes_search.best_score_
+        best_params = bayes_search.best_params_
 
-    # The feature schema, which lists the features used for training this model, is saved.
-    schema = {'features': features}
-    schema_path = model_output_dir / 'schema.json'
-    with open(schema_path, 'w') as f:
-        json.dump(schema, f, indent=4)
-    print(f"Saved schema to: {schema_path}")
-    print(f"--- Finished training for: {model_name} ---\n")
+        print(f"Best score (Brier Score) for {model_name}: {best_score:.4f} (lower is better)")
+        print(f"Best parameters: {best_params}")
+
+        # Log the best hyperparameters found by BayesSearchCV.
+        mlflow.log_params(best_params)
+
+        # Log the primary performance metric.
+        mlflow.log_metric("brier_score", best_score)
+
+        # The feature schema is logged as a dictionary artifact.
+        schema = {'features': features}
+        mlflow.log_dict(schema, "schema.json")
+        print(f"Logged schema to MLflow artifact store.")
+
+        # Log the trained model and its signature to MLflow.
+        # This replaces the need for joblib and manual saving.
+        mlflow.sklearn.log_model(
+            sk_model=best_model,
+            artifact_path="model",
+            input_example=X.head()
+        )
+        print(f"Logged model to MLflow artifact store.")
+        print(f"--- Finished training for: {model_name} ---\n")
 
 
 def main():
@@ -83,10 +95,12 @@ def main():
     try:
         project_root = Path(__file__).parent.parent.parent
     except NameError:
-        project_root = Path('.').resolve().parent
+        project_root = Path('.').resolve()
 
     data_path = project_root / 'data' / 'preprocessed' / 'preprocessed_shots.csv'
-    models_output_dir = project_root / 'models'
+    
+    # Set an MLflow experiment to group all related runs.
+    mlflow.set_experiment("Shot_Prediction_Models")
 
     # The preprocessed data is loaded from the specified path.
     print(f"Loading data from {data_path}...")
@@ -123,16 +137,19 @@ def main():
         'advanced_model': all_features
     }
 
-    # Each model configuration is iterated through to train and save the model.
+    # Each model configuration is iterated through to train and log the model.
     for name, features in model_configs.items():
         # Verification occurs that all required features for the model exist in the dataframe.
         missing_feats = [feat for feat in features if feat not in df.columns]
         if missing_feats:
             print(f"Warning: Missing columns for model '{name}': {missing_feats}. Skipping this model.")
             continue
-        train_and_save_model(name, features, df, target_variable, models_output_dir)
+        
+        # Call the streamlined function. No output path is needed.
+        train_and_log_model(name, features, df, target_variable)
 
-    print("--- All models have been trained and saved. ---")
+    print("--- All models have been trained and logged to MLflow. ---")
+    print("Run 'mlflow ui' in your terminal to see the results.")
 
 if __name__ == '__main__':
     main()
