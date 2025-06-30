@@ -20,6 +20,9 @@ def predict():
         shot_type = data.get('shot_type', None)
         normalisation = data.get('normalisation', {})
 
+        if x is None or y is None:
+            return jsonify({'error': 'Missing x or y coordinate'}), 400
+
         # Verify valid inputs
         if not verify_valid_situation(situation):
             return jsonify({'error': 'Invalid situation - Valid values are: OpenPlay, SetPiece, DirectFreekick, FromCorner, Penalty'}), 400
@@ -28,6 +31,9 @@ def predict():
 
         # Call the determine model function
         chosen_model_dic = determine_model(x, y, situation, shot_type, normalisation)
+
+        if chosen_model_dic['error'] != None:
+            return jsonify({'error': chosen_model_dic['error']}), 400
 
         chosen_model = chosen_model_dic['chosen_model']
         chosen_model_features = features[chosen_model]
