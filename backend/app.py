@@ -20,12 +20,32 @@ def load_models_from_paths(models):
             print(f"Model file not found for {model_name} at {model_path}")
     return loaded_models
 
+def load_model_input_examples(models):
+    """Load model input examples from the specified paths."""
+    input_examples = {}
+    for model_name, path in models.items():
+        model_path = os.path.join(path, 'input_example.json')
+        if os.path.exists(model_path):
+            try:
+                with open(model_path, 'r') as file:
+                    input_examples[model_name] = json.load(file)
+                print(f"Successfully loaded input example for model: {model_name}")
+            except Exception as e:
+                print(f"Error loading input example for model {model_name}: {str(e)}")
+        else:
+            print(f"Input example file not found for {model_name} at {model_path}")
+    return input_examples
+
 if __name__ == "__main__":
     # Get model paths
     model_paths = return_model_paths()
     
     # Load all models
     loaded_models = load_models_from_paths(model_paths)
+
+    # Load all input examples
+    input_examples = load_model_input_examples(model_paths)
+    print(input_examples)   
 
     test_col_values = [
         "X",
