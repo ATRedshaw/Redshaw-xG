@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Change to the backend directory
 cd "$(dirname "$0")"
 
@@ -9,6 +7,12 @@ echo "Current directory: $(pwd)"
 # Activate virtual environment if it exists
 if [ -d "venv" ]; then
     echo "Activating virtual environment..."
+    source venv/bin/activate
+else
+    echo "Virtual environment not found, installing requirements..."
+    pip install -r requirements.txt
+    echo "Creating virtual environment..."
+    python3 -m venv venv
     source venv/bin/activate
 fi
 
