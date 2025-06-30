@@ -1,6 +1,7 @@
 import joblib
 from pathlib import Path
 import json
+import pandas as pd
 
 def load_models(path='models'):
     """Load all joblib models from the specified directory into a dictionary.
@@ -100,7 +101,22 @@ def verify_valid_shot_type(shot_type):
         return True
     
     return False
+
+def verify_all_features_present(X, features):
+    """Verify all of the features needed for the model are present
+
+    Args:
+        X (pandas.DataFrame): The input data.
+        features (list): The list of features needed for the model.
     
+    Returns:
+        bool: True if all features are present, False otherwise.
+    """
+    for feature in features:
+        if feature not in X.columns:
+            return False
+    
+    return True
 
 def determine_model(x, y, situation, shot_type, normalisation):
     """Determine the appropriate model based on input features.

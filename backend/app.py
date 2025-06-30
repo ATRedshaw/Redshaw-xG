@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request
-from utils.helper import load_models, load_metadata_features, determine_model, verify_valid_situation, verify_valid_shot_type
+from utils.helper import load_models, load_metadata_features, determine_model, verify_valid_situation, verify_valid_shot_type, verify_all_features_present
 from utils.preprocess import preprocess
 
 app = Flask(__name__)
@@ -42,6 +42,29 @@ def predict():
 
         # Preprocess the input data
         X = preprocess(x, y, situation, shot_type, chosen_model, chosen_model_features)
+
+        # Verify all features are present
+        if not verify_all_features_present(X, chosen_model_features):
+            return jsonify({'error': 'Not all features are present'}), 400
+        else:
+            X = X[chosen_model_features]
+
+        # Make the prediction
+        prediction = models[chosen_model].predict_proba(X)[:, 1]
+
+        # Return the prediction
+        return jsonify({
+            'xG': round(prediction[0], 2),
+            'inputs': {
+                'x': x,
+                'y': y,
+                'situation': situation,
+                'shot_type': shot_type,
+                'normalisation': normalisation
+            },
+            'chosen_model': chosen_model,
+            'chosen_model_features': chosen_model_features
+        }), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
