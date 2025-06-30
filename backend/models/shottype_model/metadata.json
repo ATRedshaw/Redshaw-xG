@@ -1,0 +1,23 @@
+{
+    "model_name": "shottype_model",
+    "brier_score": 0.07871573652292647,
+    "best_parameters": {
+        "max_depth": 10,
+        "max_features": "log2",
+        "min_samples_leaf": 1,
+        "min_samples_split": 18,
+        "n_estimators": 295
+    },
+    "features": [
+        "X",
+        "Y",
+        "distance_to_goal",
+        "angle_to_goal",
+        "zone_central",
+        "zone_wide",
+        "shotType_Head",
+        "shotType_LeftFoot",
+        "shotType_OtherBodyPart",
+        "shotType_RightFoot"
+    ]
+}

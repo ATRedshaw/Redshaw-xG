@@ -1,0 +1,19 @@
+{
+    "model_name": "basic_model",
+    "brier_score": 0.08083724988337453,
+    "best_parameters": {
+        "max_depth": 10,
+        "max_features": "sqrt",
+        "min_samples_leaf": 1,
+        "min_samples_split": 18,
+        "n_estimators": 260
+    },
+    "features": [
+        "X",
+        "Y",
+        "distance_to_goal",
+        "angle_to_goal",
+        "zone_central",
+        "zone_wide"
+    ]
+}
