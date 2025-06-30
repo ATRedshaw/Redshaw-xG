@@ -4,3 +4,6 @@ venv/
 
 # Don't commit all the mlflow runs
 backend/mlruns/
+
+backend/utils/__pycache__/__init__.cpython-310.pyc
+backend/utils/__pycache__/helper.cpython-310.pyc
