@@ -67,6 +67,41 @@ def load_metadata_features(path='models'):
                     
     return features
 
+def verify_valid_situation(situation):
+    """Verify that the situation is valid.
+    
+    Args:
+        situation (str): The situation of the shot (e.g., 'OpenPlay', 'SetPiece').
+    
+    Returns:
+        bool: True if the situation is valid, False otherwise.
+    """
+    if situation is None:
+        return True
+    
+    if situation in ['OpenPlay', 'SetPiece', 'DirectFreekick', 'FromCorner', 'Penalty']:
+        return True
+    
+    return False
+
+def verify_valid_shot_type(shot_type):
+    """Verfiy that the shot type is valid.
+    
+    Args:
+        shot_type (str): The type of the shot (e.g., 'Head', 'RightFoot').
+    
+    Returns:
+        bool: True if the shot type is valid, False otherwise.
+    """
+    if shot_type is None:
+        return True
+    
+    if shot_type in ['Head', 'RightFoot', 'LeftFoot', 'OtherBodyPart']:
+        return True
+    
+    return False
+    
+
 def determine_model(x, y, situation, shot_type, normalisation):
     """Determine the appropriate model based on input features.
     
