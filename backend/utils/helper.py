@@ -181,8 +181,8 @@ def determine_model(x, y, situation, shot_type, normalisation):
                     'y': None,
                     'error': "The maximum width and length of the pitch cannot be a negative value."
                 }
-            x = x / max_width
-            y = y / max_length
+            x = x / max_length
+            y = y / max_width
         except (TypeError, ValueError):
             return {
                 'chosen_model': None,
@@ -271,8 +271,8 @@ if __name__ == '__main__':
             'normalisation': {'is_normalised': False, 'max_pitch_width': 68.0, 'max_pitch_length': 105.0},
             'expected': {
                 'chosen_model': 'basic_model',
-                'x': 0.5,
-                'y': 0.5,
+                'x': 34.0/105.0,
+                'y': 52.5/68.0,
                 'error': None
             },
             'description': "Valid basic_model with unnormalised coordinates"
@@ -301,8 +301,8 @@ if __name__ == '__main__':
             'normalisation': {'is_normalised': False, 'max_pitch_width': 68.0, 'max_pitch_length': 105.0},
             'expected': {
                 'chosen_model': 'situation_model',
-                'x': 0.3,
-                'y': 0.3,
+                'x': 20.4/105.0,
+                'y': 31.5/68.0,
                 'error': None
             },
             'description': "Valid situation_model with unnormalised coordinates"
