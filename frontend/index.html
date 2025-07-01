@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Football Pitch Plotter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    h1 {
+      margin-top: 24px;
+      margin-bottom: 8px;
+    }
+    .pitch-container {
+      background: #388e3c;
+      padding: 32px;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      margin-bottom: 24px;
+    }
+    svg {
+      display: block;
+      background: #388e3c;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      cursor: crosshair;
+    }
+    .coords-list {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 16px;
+      width: 420px;
+      max-width: 90vw;
+      margin-bottom: 32px;
+    }
+    .coords-list ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .coords-list li {
+      padding: 4px 0;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Football Pitch Plotter</h1>
+  <div class="pitch-container">
+    <svg id="pitch" width="1050" height="680" viewBox="0 0 1050 680">
+      <!-- Pitch outline -->
+      <rect x="0" y="0" width="1050" height="680" fill="#388e3c" stroke="#fff" stroke-width="6"/>
+      <!-- Halfway line -->
+      <line x1="525" y1="0" x2="525" y2="680" stroke="#fff" stroke-width="4"/>
+      <!-- Center circle -->
+      <circle cx="525" cy="340" r="91.5" stroke="#fff" stroke-width="4" fill="none"/>
+      <!-- Center spot -->
+      <circle cx="525" cy="340" r="4" fill="#fff"/>
+      <!-- Penalty areas -->
+      <rect x="0" y="170" width="165" height="340" fill="none" stroke="#fff" stroke-width="4"/>
+      <rect x="885" y="170" width="165" height="340" fill="none" stroke="#fff" stroke-width="4"/>
+      <!-- 6-yard boxes -->
+      <rect x="0" y="255" width="55" height="170" fill="none" stroke="#fff" stroke-width="4"/>
+      <rect x="995" y="255" width="55" height="170" fill="none" stroke="#fff" stroke-width="4"/>
+      <!-- Penalty spots -->
+      <circle cx="110" cy="340" r="4" fill="#fff"/>
+      <circle cx="940" cy="340" r="4" fill="#fff"/>
+      <!-- Penalty arcs -->
+      <!-- Left penalty arc: centered at (110,340), radius 91.5, from top intersection with penalty area to bottom intersection -->
+      <path d="M 165 248.5 A 91.5 91.5 0 0 1 165 431.5" stroke="#fff" stroke-width="4" fill="none"/>
+      <!-- Right penalty arc: centered at (940,340), radius 91.5, from top intersection with penalty area to bottom intersection -->
+      <path d="M 885 248.5 A 91.5 91.5 0 0 0 885 431.5" stroke="#fff" stroke-width="4" fill="none"/>
+      <!-- Corner arcs -->
+      <!-- Top-left corner -->
+      <path d="M15,0 A15,15 0 0,1 0,15" stroke="#fff" stroke-width="4" fill="none"/>
+      <!-- Top-right corner -->
+      <path d="M1035,0 A15,15 0 0,0 1050,15" stroke="#fff" stroke-width="4" fill="none"/>
+      <!-- Bottom-left corner -->
+      <path d="M0,665 A15,15 0 0,1 15,680" stroke="#fff" stroke-width="4" fill="none"/>
+      <!-- Bottom-right corner -->
+      <path d="M1050,665 A15,15 0 0,0 1035,680" stroke="#fff" stroke-width="4" fill="none"/>
+    </svg>
+  </div>
+  <div class="coords-list">
+    <h2>Plotted Points (meters)</h2>
+    <ul id="coords"></ul>
+  </div>
+  <script>
+    // Pitch dimensions in meters
+    const PITCH_LENGTH = 105; // meters
+    const PITCH_WIDTH = 68; // meters
+    // SVG dimensions in pixels
+    const SVG_LENGTH = 1050;
+    const SVG_WIDTH = 680;
+
+    const pitch = document.getElementById('pitch');
+    const coordsList = document.getElementById('coords');
+
+    function svgToPitchCoords(svgX, svgY) {
+      // Convert SVG px to meters (origin top-left)
+      const x = (svgX / SVG_LENGTH) * PITCH_LENGTH;
+      const y = (svgY / SVG_WIDTH) * PITCH_WIDTH;
+      return { x: x, y: y };
+    }
+
+    function pitchToSvgCoords(x, y) {
+      // Convert meters to SVG px
+      return {
+        svgX: (x / PITCH_LENGTH) * SVG_LENGTH,
+        svgY: (y / PITCH_WIDTH) * SVG_WIDTH
+      };
+    }
+
+    function addPoint(svgX, svgY) {
+      // Remove previous point and coordinate
+      const prevPoint = pitch.querySelector('.plotted-point');
+      if (prevPoint) prevPoint.remove();
+      coordsList.innerHTML = '';
+      const { x, y } = svgToPitchCoords(svgX, svgY);
+      // Draw smaller point
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', svgX);
+      circle.setAttribute('cy', svgY);
+      circle.setAttribute('r', 4);
+      circle.setAttribute('fill', '#ff5252');
+      circle.setAttribute('stroke', '#fff');
+      circle.setAttribute('stroke-width', '2');
+      circle.classList.add('plotted-point');
+      pitch.appendChild(circle);
+      // Add to list
+      const li = document.createElement('li');
+      li.textContent = `(${x.toFixed(2)}, ${y.toFixed(2)})`;
+      coordsList.appendChild(li);
+      // Call backend for xG
+      const fetchBody = {
+        x: x, 
+        y: y, 
+        situation: null,
+        shot_type: null,
+        normalisation: { is_normalised: false, max_pitch_width: 68, max_pitch_length: 105 }
+      };
+      console.log('Fetch body:', fetchBody);
+      fetch('http://127.0.0.1:5000/api/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fetchBody)
+      })
+      .then(response => {
+        // Clone the response so we can log and also parse as JSON
+        return response.clone().json().then(data => {
+          console.log('Fetch response:', data);
+          return data;
+        });
+      })
+      .then(data => {
+        let xgDiv = document.getElementById('xg-value');
+        if (!xgDiv) {
+          xgDiv = document.createElement('div');
+          xgDiv.id = 'xg-value';
+          xgDiv.style.marginTop = '12px';
+          xgDiv.style.fontSize = '1.2rem';
+          coordsList.parentNode.appendChild(xgDiv);
+        }
+        if (data.xG !== undefined) {
+          xgDiv.textContent = `xG: ${data.xG}`;
+        } else if (data.error) {
+          xgDiv.textContent = `Error: ${data.error}`;
+        } else {
+          xgDiv.textContent = 'Error: Unexpected response from server.';
+        }
+      })
+      .catch(err => {
+        let xgDiv = document.getElementById('xg-value');
+        if (!xgDiv) {
+          xgDiv = document.createElement('div');
+          xgDiv.id = 'xg-value';
+          xgDiv.style.marginTop = '12px';
+          xgDiv.style.fontSize = '1.2rem';
+          coordsList.parentNode.appendChild(xgDiv);
+        }
+        xgDiv.textContent = 'Error: Could not connect to backend.';
+        console.error('Fetch error:', err);
+      });
+    }
+
+    pitch.addEventListener('click', function(event) {
+      const rect = pitch.getBoundingClientRect();
+      const svgX = event.clientX - rect.left;
+      const svgY = event.clientY - rect.top;
+      addPoint(svgX, svgY);
+    });
+  </script>
+</body>
+</html>
