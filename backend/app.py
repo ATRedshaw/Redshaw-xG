@@ -29,22 +29,6 @@ def predict():
         if not verify_valid_shot_type(shot_type):
             return jsonify({'error': 'Invalid shot type - Valid values are: Head, RightFoot, LeftFoot, OtherBodyPart'}), 400
 
-        # Default value to penalty average as no other changing circumstances here (76% scored on average)
-        # Including approximate normalised pitch position of penalty spot
-        if situation == 'Penalty':
-            return jsonify({
-                'xG': 0.76,
-                'inputs': {
-                    'x': 0.895,
-                    'y': 0.5,
-                    'situation': situation,
-                    'shot_type': shot_type,
-                    'normalisation': normalisation
-                },
-                'chosen_model': 'penalty_default',
-                'chosen_model_features': ['is_Penalty']
-            }), 200
-
         # Call the determine model function
         chosen_model_dic = determine_model(x, y, situation, shot_type, normalisation)
 
@@ -73,6 +57,11 @@ def predict():
 
         # Make the prediction
         prediction = models[chosen_model].predict_proba(X)[:, 1]
+
+        if situation == 'Penalty':
+            prediction[0] = 0.76
+            x = 0.895
+            y = 0.5
 
         # Return the prediction
         return jsonify({
