@@ -55,6 +55,25 @@
 </head>
 <body>
   <h1>Football Pitch Plotter</h1>
+  <div style="margin-bottom: 16px;">
+    <label for="situation-select">Situation: </label>
+    <select id="situation-select">
+      <option value="">-- Select --</option>
+      <option value="OpenPlay">Open Play</option>
+      <option value="SetPiece">Set Piece</option>
+      <option value="DirectFreekick">Direct Free Kick</option>
+      <option value="FromCorner">From Corner</option>
+      <option value="Penalty">Penalty</option>
+    </select>
+    <label for="shot-type-select" style="margin-left: 16px;">Shot Type: </label>
+    <select id="shot-type-select">
+      <option value="">-- Select --</option>
+      <option value="Head">Head</option>
+      <option value="RightFoot">Right Foot</option>
+      <option value="LeftFoot">Left Foot</option>
+      <option value="OtherBodyPart">Other Body Part</option>
+    </select>
+  </div>
   <div class="pitch-container">
     <svg id="pitch" width="1070" height="680" viewBox="-10 0 1070 680">
       <!-- Pitch outline -->
@@ -111,6 +130,9 @@
     const pitch = document.getElementById('pitch');
     const coordsList = document.getElementById('coords');
 
+    let lastSvgX = null;
+    let lastSvgY = null;
+
     function svgToPitchCoords(svgX, svgY) {
       // Convert SVG px to meters (origin top-left)
       const x = (svgX / SVG_LENGTH) * PITCH_LENGTH;
@@ -127,6 +149,8 @@
     }
 
     function addPoint(svgX, svgY) {
+      lastSvgX = svgX;
+      lastSvgY = svgY;
       // Remove previous point and coordinate
       const prevPoint = pitch.querySelector('.plotted-point');
       if (prevPoint) prevPoint.remove();
@@ -146,12 +170,15 @@
       const li = document.createElement('li');
       li.textContent = `(${x.toFixed(2)}, ${y.toFixed(2)})`;
       coordsList.appendChild(li);
+      // Get selected situation and shot type
+      const situation = document.getElementById('situation-select').value || null;
+      const shot_type = document.getElementById('shot-type-select').value || null;
       // Call backend for xG
       const fetchBody = {
         x: x, 
         y: y, 
-        situation: null,
-        shot_type: null,
+        situation: situation,
+        shot_type: shot_type,
         normalisation: { is_normalised: false, max_pitch_width: 68, max_pitch_length: 105 }
       };
       console.log('Fetch body:', fetchBody);
@@ -177,7 +204,7 @@
           coordsList.parentNode.appendChild(xgDiv);
         }
         if (data.xG !== undefined) {
-          xgDiv.textContent = `xG: ${data.xG}`;
+          xgDiv.textContent = `xG: ${data.xG.toFixed(2)}`;
         } else if (data.error) {
           xgDiv.textContent = `Error: ${data.error}`;
         } else {
@@ -209,6 +236,17 @@
       // Only allow plotting inside the pitch area
       if (svgX >= 0 && svgX <= 1050 && svgY >= 0 && svgY <= 680) {
         addPoint(svgX, svgY);
+      }
+    });
+
+    document.getElementById('situation-select').addEventListener('change', function() {
+      if (lastSvgX !== null && lastSvgY !== null) {
+        addPoint(lastSvgX, lastSvgY);
+      }
+    });
+    document.getElementById('shot-type-select').addEventListener('change', function() {
+      if (lastSvgX !== null && lastSvgY !== null) {
+        addPoint(lastSvgX, lastSvgY);
       }
     });
   </script>
