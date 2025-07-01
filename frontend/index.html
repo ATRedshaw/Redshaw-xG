@@ -56,7 +56,7 @@
 <body>
   <h1>Football Pitch Plotter</h1>
   <div class="pitch-container">
-    <svg id="pitch" width="1050" height="680" viewBox="0 0 1050 680">
+    <svg id="pitch" width="1070" height="680" viewBox="-10 0 1070 680">
       <!-- Pitch outline -->
       <rect x="0" y="0" width="1050" height="680" fill="#388e3c" stroke="#fff" stroke-width="6"/>
       <!-- Halfway line -->
@@ -88,6 +88,12 @@
       <path d="M0,665 A15,15 0 0,1 15,680" stroke="#fff" stroke-width="4" fill="none"/>
       <!-- Bottom-right corner -->
       <path d="M1050,665 A15,15 0 0,0 1035,680" stroke="#fff" stroke-width="4" fill="none"/>
+      
+      <!-- Goal outlines (just outside pitch) -->
+      <!-- Left goal: x = -10, y = (340 - 7.32/2 * 10) = 315.34, height = 7.32m scaled to SVG, width = 10px -->
+      <rect x="-10" y="306.68" width="10" height="73.2" fill="none" stroke="#fff" stroke-width="3"/>
+      <!-- Right goal: x = 1050, y = 306.68, height = 73.2, width = 10px -->
+      <rect x="1050" y="306.68" width="10" height="73.2" fill="none" stroke="#fff" stroke-width="3"/>
     </svg>
   </div>
   <div class="coords-list">
@@ -193,10 +199,17 @@
     }
 
     pitch.addEventListener('click', function(event) {
-      const rect = pitch.getBoundingClientRect();
-      const svgX = event.clientX - rect.left;
-      const svgY = event.clientY - rect.top;
-      addPoint(svgX, svgY);
+      // Use SVG's coordinate transform for precise click location
+      const pt = pitch.createSVGPoint();
+      pt.x = event.clientX;
+      pt.y = event.clientY;
+      const svgP = pt.matrixTransform(pitch.getScreenCTM().inverse());
+      const svgX = svgP.x;
+      const svgY = svgP.y;
+      // Only allow plotting inside the pitch area
+      if (svgX >= 0 && svgX <= 1050 && svgY >= 0 && svgY <= 680) {
+        addPoint(svgX, svgY);
+      }
     });
   </script>
 </body>
