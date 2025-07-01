@@ -29,6 +29,21 @@ def predict():
         if not verify_valid_shot_type(shot_type):
             return jsonify({'error': 'Invalid shot type - Valid values are: Head, RightFoot, LeftFoot, OtherBodyPart'}), 400
 
+        # Default value to penalty average as no other changing circumstances here (76% scored on average)
+        if situation == 'Penalty':
+            return jsonify({
+                'xG': 0.76,
+                'inputs': {
+                    'x': x,
+                    'y': y,
+                    'situation': situation,
+                    'shot_type': shot_type,
+                    'normalisation': normalisation
+                },
+                'chosen_model': 'N/A',
+                'chosen_model_features': [situation, shot_type]
+            }), 200
+
         # Call the determine model function
         chosen_model_dic = determine_model(x, y, situation, shot_type, normalisation)
 
