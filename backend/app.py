@@ -1,10 +1,15 @@
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 from utils.helper import load_models, load_metadata_features, determine_model, verify_valid_situation, verify_valid_shot_type, verify_all_features_present
 from utils.preprocess import preprocess
 
 app = Flask(__name__)
+CORS(app)
 models = load_models()
 features = load_metadata_features()
+
+# Add CORS
+
 
 # ---------- ROUTES ----------
 @app.route('/api/predict', methods=['POST'])
