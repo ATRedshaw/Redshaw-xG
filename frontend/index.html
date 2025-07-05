@@ -1,189 +1,135 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Football Pitch Visualization</title>
-  <style>
-        /* Basic page styling */
-    body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-            background-color: #f0f2f5;
-            color: #333;
-      margin: 0;
-            padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-            justify-content: center;
-      min-height: 100vh;
-            box-sizing: border-box;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive xG Predictor</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Base font for the page */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
-
-        /* Container for the canvas to manage size and centering */
-        #pitch-container {
-            width: 100%;
-            max-width: 1000px; /* Max width of the pitch container */
-            margin: 1rem auto;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            overflow: hidden; /* Ensures canvas corners are rounded if container has border-radius */
-        }
-
-        /* Canvas styling */
-        canvas {
-            display: block; /* Removes bottom margin/space */
-            width: 100%;
-            height: auto; /* Height is set by JS to maintain aspect ratio */
-            background-color: transparent; /* Transparent background */
-        }
-
-        /* Controls styling */
-        .controls {
-            margin-bottom: 1.5rem;
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .control-group {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .control-group label {
-            font-weight: 500;
-            color: #333;
-        }
-
-        .control-group select {
-            padding: 0.5rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background-color: white;
-            font-size: 0.9rem;
-    }
-
-        /* Styling for the coordinate display panel */
-        #coords-display {
-            margin-top: 1.5rem;
-            padding: 0.75rem 1.25rem;
-            background-color: #ffffff;
-      border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            font-size: 1.1rem;
-            font-weight: 500;
-            color: #000080; /* Navy text to match pitch */
-            min-width: 250px;
-            text-align: center;
-            transition: opacity 0.3s ease;
-    }
-
-        #xg-value {
-            margin-top: 0.75rem;
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #d32f2f;
-    }
-  </style>
+    </style>
 </head>
-<body>
 
-    <h1>Football Pitch Coordinate Plotter</h1>
+<body class="bg-slate-100 text-slate-800 antialiased">
 
-    <!-- Controls for situation and shot type -->
-    <div class="controls">
-        <div class="control-group">
-            <label for="situation-select">Situation:</label>
-    <select id="situation-select">
-      <option value="">-- Select --</option>
-      <option value="OpenPlay">Open Play</option>
-      <option value="SetPiece">Set Piece</option>
-      <option value="DirectFreekick">Direct Free Kick</option>
-      <option value="FromCorner">From Corner</option>
-      <option value="Penalty">Penalty</option>
-    </select>
-        </div>
-        <div class="control-group">
-            <label for="shot-type-select">Shot Type:</label>
-    <select id="shot-type-select">
-      <option value="">-- Select --</option>
-      <option value="Head">Head</option>
-      <option value="RightFoot">Right Foot</option>
-      <option value="LeftFoot">Left Foot</option>
-      <option value="OtherBodyPart">Other Body Part</option>
-    </select>
-  </div>
+    <!-- Main container for the entire application layout -->
+    <div class="container mx-auto p-4 lg:p-8">
+
+        <!-- Header -->
+        <header class="mb-6 text-center lg:text-left">
+            <h1 class="text-4xl font-bold text-slate-900">Interactive xG Predictor</h1>
+            <p class="mt-1 text-lg text-slate-600">Click on the pitch to plot a shot and get its predicted xG value.</p>
+        </header>
+
+        <!-- Main Content Area: Flexbox for two-column layout on large screens -->
+        <main class="flex flex-col lg:flex-row lg:gap-8">
+
+            <!-- Left Column: Contains the pitch visualization and info display -->
+            <div class="lg:w-3/4 w-full">
+                <div id="pitch-container" class="w-full bg-white shadow-lg rounded-lg overflow-hidden relative">
+                    <canvas id="football-pitch" class="block w-full h-auto cursor-crosshair"></canvas>
+                </div>
+
+                <!-- Display for plotted point coordinates and xG value -->
+                <div id="plot-info" class="mt-4 flex flex-col items-center justify-center p-4 bg-white rounded-lg shadow-md min-h-[100px]">
+                    <span id="coords-text" class="font-semibold text-slate-700">Click on the pitch to plot a point.</span>
+                    <div id="xg-display" class="mt-2 text-center" style="display: none;">
+                        <span class="text-sm text-slate-500">Predicted xG</span>
+                        <p id="xg-value" class="text-3xl font-bold text-blue-600">0.00</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Contains user controls -->
+            <aside class="lg:w-1/4 w-full mt-6 lg:mt-0">
+                <div class="bg-white p-6 rounded-lg shadow-lg sticky top-8">
+                    <h2 class="text-2xl font-bold text-slate-800 border-b border-slate-200 pb-3 mb-4">Controls</h2>
+                    
+                    <!-- Situation Filter -->
+                    <div class="mb-4">
+                        <label for="situation-select" class="block text-sm font-medium text-slate-600 mb-1">Situation</label>
+                        <select id="situation-select" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                            <option value="">All Situations</option>
+                            <option value="OpenPlay">Open Play</option>
+                            <option value="SetPiece">Set Piece</option>
+                            <option value="DirectFreekick">Direct Free Kick</option>
+                            <option value="FromCorner">From Corner</option>
+                            <option value="Penalty">Penalty</option>
+                        </select>
+                    </div>
+
+                    <!-- Shot Type Filter -->
+                    <div class="mb-6">
+                        <label for="shot-type-select" class="block text-sm font-medium text-slate-600 mb-1">Shot Type</label>
+                        <select id="shot-type-select" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                            <option value="">All Shot Types</option>
+                            <option value="Head">Head</option>
+                            <option value="RightFoot">Right Foot</option>
+                            <option value="LeftFoot">Left Foot</option>
+                            <option value="OtherBodyPart">Other Body Part</option>
+                        </select>
+                    </div>
+                </div>
+            </aside>
+
+        </main>
     </div>
 
-    <!-- The container that holds the canvas -->
-    <div id="pitch-container">
-        <canvas id="football-pitch"></canvas>
-  </div>
-
-    <!-- The div to display the plotted point's coordinates -->
-    <div id="coords-display">Click on the pitch to plot a point.</div>
-
-  <script>
+    <script>
         // --- DOM ELEMENT SELECTION ---
         const canvas = document.getElementById('football-pitch');
         const ctx = canvas.getContext('2d');
-        const coordsDisplay = document.getElementById('coords-display');
         const pitchContainer = document.getElementById('pitch-container');
-
-        // --- PITCH DIMENSIONS (FIFA Standard International Match) ---
+        const coordsText = document.getElementById('coords-text');
+        const xgDisplay = document.getElementById('xg-display');
+        const xgValue = document.getElementById('xg-value');
+        const situationSelect = document.getElementById('situation-select');
+        const shotTypeSelect = document.getElementById('shot-type-select');
+        
+        // --- PITCH CONSTANTS (FIFA Standard) ---
         const PITCH_LENGTH_METERS = 105;
         const PITCH_WIDTH_METERS = 68;
-        
-        // --- GOAL & PADDING DIMENSIONS ---
         const GOAL_WIDTH_METERS = 7.32;
         const GOAL_DEPTH_METERS = 2;
-        const PADDING_METERS = 3; // Padding on each side to show goals
-        
-        // --- TOTAL CANVAS DIMENSIONS FOR ASPECT RATIO CALCULATION ---
+        const PADDING_METERS = 3;
         const TOTAL_WIDTH_METERS = PITCH_LENGTH_METERS + 2 * PADDING_METERS;
-        const ASPECT_RATIO = TOTAL_WIDTH_METERS / PITCH_WIDTH_METERS;
-
-        // --- MARKING DIMENSIONS IN METERS ---
+        const TOTAL_HEIGHT_METERS = PITCH_WIDTH_METERS + 2 * PADDING_METERS; // Includes top/bottom padding for visual balance
+        const ASPECT_RATIO = TOTAL_WIDTH_METERS / TOTAL_HEIGHT_METERS;
+        
+        // --- PITCH MARKING CONSTANTS (in meters) ---
         const GOAL_AREA_LENGTH = 5.5;
         const GOAL_AREA_WIDTH = 18.32;
         const PENALTY_AREA_LENGTH = 16.5;
         const PENALTY_AREA_WIDTH = 40.32;
         const CENTER_CIRCLE_RADIUS = 9.15;
         const PENALTY_SPOT_DISTANCE = 11;
-        
+
         // --- STATE & CONFIGURATION ---
         let scale; // Pixels per meter, calculated dynamically
         let plottedPoint = null; // Stores {x, y} in meters
-        const POINT_RADIUS_PX = 5;
+        const POINT_RADIUS_PX = 6;
         const LINE_COLOR = '#000080'; // Navy Blue
-        const POINT_COLOR = '#FF0000'; // Red
+        const POINT_COLOR = '#d32f2f'; // Red
+        const PENALTY_SPOT_RIGHT_X = PITCH_LENGTH_METERS - PENALTY_SPOT_DISTANCE;
+        const PENALTY_SPOT_Y = PITCH_WIDTH_METERS / 2;
 
         /**
-         * Converts meter-based coordinates (relative to the pitch) to pixel coordinates for drawing on canvas.
-         * The X-axis is offset by the padding to center the pitch.
-         * The Y-axis is inverted because canvas (0,0) is top-left, while we want (0,0) to be bottom-left.
+         * Converts meter-based coordinates to canvas pixel coordinates.
+         * The X-axis is offset by padding. The Y-axis is inverted and offset.
          * @param {number} metersX - The X coordinate in meters.
          * @param {number} metersY - The Y coordinate in meters.
          * @returns {{x: number, y: number}} - The pixel coordinates.
          */
         function metersToPixels(metersX, metersY) {
             const px = (metersX + PADDING_METERS) * scale;
-            // Invert Y-axis: (Total Height in Meters - Y in Meters) * scale
-            const py = (PITCH_WIDTH_METERS - metersY) * scale;
+            const py = (PITCH_WIDTH_METERS - metersY + PADDING_METERS) * scale; // Y is inverted and padded
             return { x: px, y: py };
         }
-
-        /**
-         * Draws a line on the canvas using meter values.
-         * @param {number} x1m - Start X in meters.
-         * @param {number} y1m - Start Y in meters.
-         * @param {number} x2m - End X in meters.
-         * @param {number} y2m - End Y in meters.
-         */
+        
         function drawLine(x1m, y1m, x2m, y2m) {
             const p1 = metersToPixels(x1m, y1m);
             const p2 = metersToPixels(x2m, y2m);
@@ -193,115 +139,68 @@
             ctx.stroke();
         }
 
-        /**
-         * Draws a circle or arc on the canvas using meter values.
-         * @param {number} x_m - Center X in meters.
-         * @param {number} y_m - Center Y in meters.
-         * @param {number} radius_m - Radius in meters.
-         * @param {boolean} [fill=false] - Whether to fill the circle.
-         * @param {number} [startAngle=0] - Start angle for arcs.
-         * @param {number} [endAngle=2 * Math.PI] - End angle for arcs.
-         * @param {boolean} [anticlockwise=false] - Drawing direction.
-         */
         function drawCircle(x_m, y_m, radius_m, fill = false, startAngle = 0, endAngle = 2 * Math.PI, anticlockwise = false) {
             const p = metersToPixels(x_m, y_m);
             const radius_px = radius_m * scale;
             ctx.beginPath();
             ctx.arc(p.x, p.y, radius_px, startAngle, endAngle, anticlockwise);
-            if (fill) {
-                ctx.fill();
-            } else {
-                ctx.stroke();
-            }
+            if (fill) ctx.fill(); else ctx.stroke();
         }
 
         /**
          * Main function to draw the entire pitch and the plotted point.
          */
         function drawPitch() {
-            // 1. Clear the canvas for a fresh draw
+            // 1. Clear the canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             // 2. Set drawing styles
             ctx.strokeStyle = LINE_COLOR;
             ctx.fillStyle = LINE_COLOR;
-            ctx.lineWidth = 2; // Set a clear line width
-            ctx.save(); // Save default context state
+            ctx.lineWidth = 2;
 
             // --- Draw Goals ---
             const goalY1 = (PITCH_WIDTH_METERS - GOAL_WIDTH_METERS) / 2;
             const goalY2 = (PITCH_WIDTH_METERS + GOAL_WIDTH_METERS) / 2;
-
-            // Left Goal (behind the goal line)
             drawLine(0, goalY1, -GOAL_DEPTH_METERS, goalY1);
             drawLine(0, goalY2, -GOAL_DEPTH_METERS, goalY2);
             drawLine(-GOAL_DEPTH_METERS, goalY1, -GOAL_DEPTH_METERS, goalY2);
-
-            // Right Goal (behind the goal line)
             drawLine(PITCH_LENGTH_METERS, goalY1, PITCH_LENGTH_METERS + GOAL_DEPTH_METERS, goalY1);
             drawLine(PITCH_LENGTH_METERS, goalY2, PITCH_LENGTH_METERS + GOAL_DEPTH_METERS, goalY2);
             drawLine(PITCH_LENGTH_METERS + GOAL_DEPTH_METERS, goalY1, PITCH_LENGTH_METERS + GOAL_DEPTH_METERS, goalY2);
 
-            // --- Draw Pitch Markings (all values in meters) ---
-
-            // Outer boundary
+            // --- Draw Pitch Markings ---
             drawLine(0, 0, PITCH_LENGTH_METERS, 0); // Bottom touchline
             drawLine(0, PITCH_WIDTH_METERS, PITCH_LENGTH_METERS, PITCH_WIDTH_METERS); // Top touchline
             drawLine(0, 0, 0, PITCH_WIDTH_METERS); // Left goal line
             drawLine(PITCH_LENGTH_METERS, 0, PITCH_LENGTH_METERS, PITCH_WIDTH_METERS); // Right goal line
-
-            // Halfway line
-            drawLine(PITCH_LENGTH_METERS / 2, 0, PITCH_LENGTH_METERS / 2, PITCH_WIDTH_METERS);
-
-            // Center circle and spot
-            drawCircle(PITCH_LENGTH_METERS / 2, PITCH_WIDTH_METERS / 2, CENTER_CIRCLE_RADIUS);
+            drawLine(PITCH_LENGTH_METERS / 2, 0, PITCH_LENGTH_METERS / 2, PITCH_WIDTH_METERS); // Halfway line
+            drawCircle(PITCH_LENGTH_METERS / 2, PITCH_WIDTH_METERS / 2, CENTER_CIRCLE_RADIUS); // Center circle
             drawCircle(PITCH_LENGTH_METERS / 2, PITCH_WIDTH_METERS / 2, 0.3, true); // Center spot
 
-            // --- Left Side Markings ---
-            const leftGoalX = 0;
-            const leftPenaltySpotX = PENALTY_SPOT_DISTANCE;
-            
-            // Left Penalty Area
-            drawLine(leftGoalX, (PITCH_WIDTH_METERS - PENALTY_AREA_WIDTH) / 2, PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS - PENALTY_AREA_WIDTH) / 2);
-            drawLine(leftGoalX, (PITCH_WIDTH_METERS + PENALTY_AREA_WIDTH) / 2, PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS + PENALTY_AREA_WIDTH) / 2);
+            // Left side penalty and goal areas
+            drawLine(0, (PITCH_WIDTH_METERS - PENALTY_AREA_WIDTH) / 2, PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS - PENALTY_AREA_WIDTH) / 2);
+            drawLine(0, (PITCH_WIDTH_METERS + PENALTY_AREA_WIDTH) / 2, PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS + PENALTY_AREA_WIDTH) / 2);
             drawLine(PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS - PENALTY_AREA_WIDTH) / 2, PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS + PENALTY_AREA_WIDTH) / 2);
-            
-            // Left Goal Area
-            drawLine(leftGoalX, (PITCH_WIDTH_METERS - GOAL_AREA_WIDTH) / 2, GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS - GOAL_AREA_WIDTH) / 2);
-            drawLine(leftGoalX, (PITCH_WIDTH_METERS + GOAL_AREA_WIDTH) / 2, GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS + GOAL_AREA_WIDTH) / 2);
+            drawLine(0, (PITCH_WIDTH_METERS - GOAL_AREA_WIDTH) / 2, GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS - GOAL_AREA_WIDTH) / 2);
+            drawLine(0, (PITCH_WIDTH_METERS + GOAL_AREA_WIDTH) / 2, GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS + GOAL_AREA_WIDTH) / 2);
             drawLine(GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS - GOAL_AREA_WIDTH) / 2, GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS + GOAL_AREA_WIDTH) / 2);
-            
-            // Left Penalty Spot
-            drawCircle(leftPenaltySpotX, PITCH_WIDTH_METERS / 2, 0.3, true);
+            drawCircle(PENALTY_SPOT_DISTANCE, PITCH_WIDTH_METERS / 2, 0.3, true);
+            const leftArcAngle = Math.acos((PENALTY_AREA_LENGTH - PENALTY_SPOT_DISTANCE) / CENTER_CIRCLE_RADIUS);
+            drawCircle(PENALTY_SPOT_DISTANCE, PITCH_WIDTH_METERS / 2, CENTER_CIRCLE_RADIUS, false, -leftArcAngle, leftArcAngle);
 
-            // Left Penalty Arc
-            const leftArcAngle = Math.acos((PENALTY_AREA_LENGTH - leftPenaltySpotX) / CENTER_CIRCLE_RADIUS);
-            drawCircle(leftPenaltySpotX, PITCH_WIDTH_METERS / 2, CENTER_CIRCLE_RADIUS, false, -leftArcAngle, leftArcAngle);
-
-            // --- Right Side Markings ---
-            const rightGoalX = PITCH_LENGTH_METERS;
+            // Right side penalty and goal areas
             const rightPenaltySpotX = PITCH_LENGTH_METERS - PENALTY_SPOT_DISTANCE;
-
-            // Right Penalty Area
-            drawLine(rightGoalX, (PITCH_WIDTH_METERS - PENALTY_AREA_WIDTH) / 2, PITCH_LENGTH_METERS - PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS - PENALTY_AREA_WIDTH) / 2);
-            drawLine(rightGoalX, (PITCH_WIDTH_METERS + PENALTY_AREA_WIDTH) / 2, PITCH_LENGTH_METERS - PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS + PENALTY_AREA_WIDTH) / 2);
+            drawLine(PITCH_LENGTH_METERS, (PITCH_WIDTH_METERS - PENALTY_AREA_WIDTH) / 2, PITCH_LENGTH_METERS - PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS - PENALTY_AREA_WIDTH) / 2);
+            drawLine(PITCH_LENGTH_METERS, (PITCH_WIDTH_METERS + PENALTY_AREA_WIDTH) / 2, PITCH_LENGTH_METERS - PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS + PENALTY_AREA_WIDTH) / 2);
             drawLine(PITCH_LENGTH_METERS - PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS - PENALTY_AREA_WIDTH) / 2, PITCH_LENGTH_METERS - PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS + PENALTY_AREA_WIDTH) / 2);
-            
-            // Right Goal Area
-            drawLine(rightGoalX, (PITCH_WIDTH_METERS - GOAL_AREA_WIDTH) / 2, PITCH_LENGTH_METERS - GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS - GOAL_AREA_WIDTH) / 2);
-            drawLine(rightGoalX, (PITCH_WIDTH_METERS + GOAL_AREA_WIDTH) / 2, PITCH_LENGTH_METERS - GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS + GOAL_AREA_WIDTH) / 2);
+            drawLine(PITCH_LENGTH_METERS, (PITCH_WIDTH_METERS - GOAL_AREA_WIDTH) / 2, PITCH_LENGTH_METERS - GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS - GOAL_AREA_WIDTH) / 2);
+            drawLine(PITCH_LENGTH_METERS, (PITCH_WIDTH_METERS + GOAL_AREA_WIDTH) / 2, PITCH_LENGTH_METERS - GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS + GOAL_AREA_WIDTH) / 2);
             drawLine(PITCH_LENGTH_METERS - GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS - GOAL_AREA_WIDTH) / 2, PITCH_LENGTH_METERS - GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS + GOAL_AREA_WIDTH) / 2);
-
-            // Right Penalty Spot
             drawCircle(rightPenaltySpotX, PITCH_WIDTH_METERS / 2, 0.3, true);
-
-            // Right Penalty Arc
             const rightArcAngle = Math.acos((rightPenaltySpotX - (PITCH_LENGTH_METERS - PENALTY_AREA_LENGTH)) / CENTER_CIRCLE_RADIUS);
-            // FIX: Set anticlockwise to false (or omit) to draw the correct arc shape.
-            drawCircle(rightPenaltySpotX, PITCH_WIDTH_METERS / 2, CENTER_CIRCLE_RADIUS, false, Math.PI - rightArcAngle, Math.PI + rightArcAngle, false);
-
-            ctx.restore(); // Restore context state
-
+            drawCircle(rightPenaltySpotX, PITCH_WIDTH_METERS / 2, CENTER_CIRCLE_RADIUS, false, Math.PI - rightArcAngle, Math.PI + rightArcAngle);
+            
             // 3. Draw the plotted point if it exists
             if (plottedPoint) {
                 ctx.fillStyle = POINT_COLOR;
@@ -311,25 +210,20 @@
                 ctx.fill();
             }
         }
-
+        
         /**
-         * Sets up the canvas dimensions and scale based on container size.
-         * This function is called on load and on window resize.
+         * Sets up the canvas dimensions and scale based on its container size.
          */
         function setupCanvas() {
             const containerWidth = pitchContainer.clientWidth;
             canvas.width = containerWidth;
             canvas.height = containerWidth / ASPECT_RATIO;
-            
-            // Calculate the scale factor (pixels per meter) based on the total width including padding
-            scale = canvas.width / TOTAL_WIDTH_METERS;
-            
-            // Redraw everything with the new dimensions
+            scale = canvas.width / TOTAL_WIDTH_METERS; // Calculate scale based on total width including padding
             drawPitch();
         }
 
         /**
-         * Handles click events on the canvas to plot or move the point.
+         * Handles click events on the canvas to plot a point.
          * @param {MouseEvent} event - The click event.
          */
         function handleCanvasClick(event) {
@@ -337,105 +231,102 @@
             const pixelX = event.clientX - rect.left;
             const pixelY = event.clientY - rect.top;
 
-            // Convert pixel coordinates to meter coordinates, accounting for padding
+            // Convert pixel coordinates to meter coordinates
             const metersX = (pixelX / scale) - PADDING_METERS;
-            const metersY = PITCH_WIDTH_METERS - (pixelY / scale); // Invert Y-axis
+            const metersY = PITCH_WIDTH_METERS + PADDING_METERS - (pixelY / scale);
 
-            // Check if the click is within the plottable pitch boundaries (0-105m, 0-68m)
+            // If current situation is Penalty, check if click is away from the spot
+            if (situationSelect.value === 'Penalty') {
+                const distance = Math.sqrt(Math.pow(metersX - PENALTY_SPOT_RIGHT_X, 2) + Math.pow(metersY - PENALTY_SPOT_Y, 2));
+                // If clicked more than a meter away from the penalty spot, reset situation
+                if (distance > 1) {
+                    situationSelect.value = ''; // Reset to "All Situations"
+                }
+            }
+            
+            // Constrain the point to be within the field of play
             if (metersX >= 0 && metersX <= PITCH_LENGTH_METERS && metersY >= 0 && metersY <= PITCH_WIDTH_METERS) {
                 plottedPoint = { x: metersX, y: metersY };
-                
-                // Update the coordinate display
-                coordsDisplay.textContent = `X: ${metersX.toFixed(2)}m, Y: ${metersY.toFixed(2)}m`;
-                
-                // Redraw the pitch to show the new point
+                coordsText.textContent = `Coordinates: X: ${metersX.toFixed(1)}m, Y: ${metersY.toFixed(1)}m`;
                 drawPitch();
-                
-                // Call API for xG prediction
                 callXGPrediction(metersX, metersY);
             }
         }
 
         /**
-         * Calls the backend API to get xG prediction
-         * @param {number} x - X coordinate in meters
-         * @param {number} y - Y coordinate in meters
+         * Calls the backend API to get an xG prediction for the given point.
+         * @param {number} x - The X coordinate in meters.
+         * @param {number} y - The Y coordinate in meters.
          */
-        function callXGPrediction(x, y) {
-      // Get selected situation and shot type
-      const situation = document.getElementById('situation-select').value || null;
-      const shot_type = document.getElementById('shot-type-select').value || null;
-            
-            // Prepare request body
-      const fetchBody = {
-        x: x, 
-        y: y, 
-        situation: situation,
-        shot_type: shot_type,
-        normalisation: { is_normalised: false, max_pitch_width: 68, max_pitch_length: 105 }
-      };
-            
-      console.log('Fetch body:', fetchBody);
-            
-      fetch('http://127.0.0.1:5000/api/predict', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(fetchBody)
-      })
-      .then(response => {
-        // Clone the response so we can log and also parse as JSON
-        return response.clone().json().then(data => {
-          console.log('Fetch response:', data);
-          return data;
-        });
-      })
-      .then(data => {
-        let xgDiv = document.getElementById('xg-value');
-        if (!xgDiv) {
-          xgDiv = document.createElement('div');
-          xgDiv.id = 'xg-value';
-                    coordsDisplay.appendChild(xgDiv);
+        async function callXGPrediction(x, y) {
+            const situation = situationSelect.value || null;
+            const shot_type = shotTypeSelect.value || null;
+
+            const fetchBody = {
+                x: x,
+                y: y,
+                situation: situation,
+                shot_type: shot_type,
+                normalisation: { is_normalised: false, max_pitch_width: 68, max_pitch_length: 105 }
+            };
+
+            xgValue.textContent = '...'; // Indicate loading
+            xgDisplay.style.display = 'block';
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(fetchBody)
+                });
+                const data = await response.json();
+
+                if (data.xG !== undefined) {
+                    xgValue.textContent = data.xG.toFixed(2);
+                } else {
+                    throw new Error(data.error || 'Unexpected response format');
+                }
+            } catch (err) {
+                xgValue.textContent = 'Error';
+                console.error('Fetch error:', err);
+            }
         }
-        if (data.xG !== undefined) {
-          xgDiv.textContent = `xG: ${data.xG.toFixed(2)}`;
-        } else if (data.error) {
-          xgDiv.textContent = `Error: ${data.error}`;
-        } else {
-          xgDiv.textContent = 'Error: Unexpected response from server.';
+        
+        /**
+         * Handles changes to the situation dropdown.
+         * If "Penalty" is selected, it automatically plots the point.
+         * Otherwise, it just updates the prediction for the existing point.
+         */
+        function handleSituationChange() {
+            if (situationSelect.value === 'Penalty') {
+                // Automatically plot the point at the right penalty spot
+                plottedPoint = { x: PENALTY_SPOT_RIGHT_X, y: PENALTY_SPOT_Y };
+                coordsText.textContent = `Coordinates: X: ${plottedPoint.x.toFixed(1)}m, Y: ${plottedPoint.y.toFixed(1)}m (Penalty Spot)`;
+                drawPitch();
+                callXGPrediction(plottedPoint.x, plottedPoint.y);
+            } else {
+                // For other situations, just update the xG if a point is already plotted
+                updateXGPrediction();
+            }
         }
-      })
-      .catch(err => {
-        let xgDiv = document.getElementById('xg-value');
-        if (!xgDiv) {
-          xgDiv = document.createElement('div');
-          xgDiv.id = 'xg-value';
-                    coordsDisplay.appendChild(xgDiv);
-        }
-        xgDiv.textContent = 'Error: Could not connect to backend.';
-        console.error('Fetch error:', err);
-      });
-    }
 
         /**
-         * Updates the xG prediction when situation or shot type changes
+         * Re-triggers the prediction if a filter is changed and a point exists.
          */
         function updateXGPrediction() {
             if (plottedPoint) {
                 callXGPrediction(plottedPoint.x, plottedPoint.y);
             }
         }
-
-        // --- INITIALIZATION AND EVENT LISTENERS ---
+        
+        // --- EVENT LISTENERS & INITIALIZATION ---
         window.addEventListener('resize', setupCanvas);
         canvas.addEventListener('click', handleCanvasClick);
-
-        // Add event listeners for situation and shot type selectors
-        document.getElementById('situation-select').addEventListener('change', updateXGPrediction);
-        document.getElementById('shot-type-select').addEventListener('change', updateXGPrediction);
+        situationSelect.addEventListener('change', handleSituationChange);
+        shotTypeSelect.addEventListener('change', updateXGPrediction);
 
         // Initial setup on page load
-        window.onload = setupCanvas;
-
-  </script>
+        document.addEventListener('DOMContentLoaded', setupCanvas);
+    </script>
 </body>
 </html>
