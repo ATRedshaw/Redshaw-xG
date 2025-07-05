@@ -4,6 +4,7 @@ from utils.helper import load_models, load_metadata_features, determine_model, v
 from utils.preprocess import preprocess
 import json
 
+# Add CORS, and load models and features
 app = Flask(__name__)
 CORS(app)
 models = load_models()
@@ -15,11 +16,7 @@ try:
     with open(heatmap_data_path, 'r') as f:
         heatmap_data = json.load(f)
 except FileNotFoundError:
-    # In a real app, you might want to log this error.
     heatmap_data = None
-
-# Add CORS
-
 
 # ---------- ROUTES ----------
 @app.route('/api/predict', methods=['POST'])
