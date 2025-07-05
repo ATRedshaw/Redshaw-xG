@@ -139,8 +139,7 @@ def main():
     all_features = [col for col in all_cols if col != target_variable]
 
     base_features = [
-        'X', 'Y', 'distance_to_goal', 'angle_to_goal', 
-        'zone_central', 'zone_wide'
+        'X', 'Y', 'distance_to_goal', 'angle_to_goal'
     ]
     
     situation_features = [col for col in all_features if col.startswith('situation_')]

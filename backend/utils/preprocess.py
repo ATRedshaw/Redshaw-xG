@@ -62,14 +62,6 @@ def preprocess(x, y, situation, shot_type, chosen_model, chosen_model_features):
                 features['angle_to_goal'] = np.arccos(cos_angle)
         return features
 
-    def create_zones(features, y):
-        """Create one-hot encoded zone features based on y-coordinate."""
-        if 'zone_central' in features and 'zone_wide' in features:
-            is_wide = (y < WIDE_AREA_THRESHOLD) or (y > (1 - WIDE_AREA_THRESHOLD))
-            features['zone_central'] = 1 if not is_wide else 0
-            features['zone_wide'] = 1 if is_wide else 0
-        return features
-
     def add_situation_features(features, situation):
         """Add one-hot encoded situation features."""
         if situation is not None:
@@ -113,7 +105,6 @@ def preprocess(x, y, situation, shot_type, chosen_model, chosen_model_features):
     # Calculate numerical features
     features = calculate_distance_to_goal(features, x, y)
     features = calculate_angle_to_goal(features, x, y)
-    features = create_zones(features, y)
 
     # Add categorical and interaction features based on the chosen model
     if chosen_model in ['situation_model', 'advanced_model']:
@@ -136,10 +127,10 @@ def preprocess(x, y, situation, shot_type, chosen_model, chosen_model_features):
 if __name__ == '__main__':
     # Define feature order for each model
     model_features = {
-        'basic_model': ['X', 'Y', 'distance_to_goal', 'angle_to_goal', 'zone_central', 'zone_wide'],
-        'shottype_model': ['X', 'Y', 'distance_to_goal', 'angle_to_goal', 'zone_central', 'zone_wide', 'shotType_Head', 'shotType_LeftFoot', 'shotType_OtherBodyPart', 'shotType_RightFoot'],
-        'situation_model': ['X', 'Y', 'distance_to_goal', 'angle_to_goal', 'zone_central', 'zone_wide', 'situation_DirectFreekick', 'situation_FromCorner', 'situation_OpenPlay', 'situation_Penalty', 'situation_SetPiece'],
-        'advanced_model': ['X', 'Y', 'distance_to_goal', 'angle_to_goal', 'situation_DirectFreekick', 'situation_FromCorner', 'situation_OpenPlay', 'situation_Penalty', 'situation_SetPiece', 'shotType_Head', 'shotType_LeftFoot', 'shotType_OtherBodyPart', 'shotType_RightFoot', 'zone_central', 'zone_wide', 'interaction_DirectFreekick_LeftFoot', 'interaction_DirectFreekick_RightFoot', 'interaction_FromCorner_Head', 'interaction_FromCorner_LeftFoot', 'interaction_FromCorner_OtherBodyPart', 'interaction_FromCorner_RightFoot', 'interaction_OpenPlay_Head', 'interaction_OpenPlay_LeftFoot', 'interaction_OpenPlay_OtherBodyPart', 'interaction_OpenPlay_RightFoot', 'interaction_Penalty_LeftFoot', 'interaction_Penalty_RightFoot', 'interaction_SetPiece_Head', 'interaction_SetPiece_LeftFoot', 'interaction_SetPiece_OtherBodyPart', 'interaction_SetPiece_RightFoot']
+        'basic_model': ['X', 'Y', 'distance_to_goal', 'angle_to_goal'],
+        'shottype_model': ['X', 'Y', 'distance_to_goal', 'angle_to_goal', 'shotType_Head', 'shotType_LeftFoot', 'shotType_OtherBodyPart', 'shotType_RightFoot'],
+        'situation_model': ['X', 'Y', 'distance_to_goal', 'angle_to_goal', 'situation_DirectFreekick', 'situation_FromCorner', 'situation_OpenPlay', 'situation_Penalty', 'situation_SetPiece'],
+        'advanced_model': ['X', 'Y', 'distance_to_goal', 'angle_to_goal', 'situation_DirectFreekick', 'situation_FromCorner', 'situation_OpenPlay', 'situation_Penalty', 'situation_SetPiece', 'shotType_Head', 'shotType_LeftFoot', 'shotType_OtherBodyPart', 'shotType_RightFoot', 'interaction_DirectFreekick_LeftFoot', 'interaction_DirectFreekick_RightFoot', 'interaction_FromCorner_Head', 'interaction_FromCorner_LeftFoot', 'interaction_FromCorner_OtherBodyPart', 'interaction_FromCorner_RightFoot', 'interaction_OpenPlay_Head', 'interaction_OpenPlay_LeftFoot', 'interaction_OpenPlay_OtherBodyPart', 'interaction_OpenPlay_RightFoot', 'interaction_Penalty_LeftFoot', 'interaction_Penalty_RightFoot', 'interaction_SetPiece_Head', 'interaction_SetPiece_LeftFoot', 'interaction_SetPiece_OtherBodyPart', 'interaction_SetPiece_RightFoot']
     }
 
     # Define multiple test cases

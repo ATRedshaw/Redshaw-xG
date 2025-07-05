@@ -42,10 +42,7 @@ def preprocess_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
     df_features['distance_to_goal'] = calculate_distance_to_goal(df[['X', 'Y']])
     df_features['angle_to_goal'] = calculate_angle_to_goal(df[['X', 'Y']])
     
-    # 2.4 Create field zone feature
-    zone_dummies = create_field_zone_feature(df[['X', 'Y']])
-    
-    # 2.5 Create interaction terms
+    # 2.4 Create interaction terms
     interaction_dummies = create_interaction_terms(df[['situation', 'shotType']])
     
     # Combine all features with logical ordering
@@ -53,7 +50,6 @@ def preprocess_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
         df_features,                    # X, Y coordinates
         situation_dummies,              # Situation types
         shot_type_dummies,              # Shot types
-        zone_dummies,                   # Field zones
         interaction_dummies,            # Interaction terms
         y.rename('target')              # Target variable (will be moved later)
     ], axis=1)
@@ -110,21 +106,6 @@ def calculate_angle_to_goal(coords: pd.DataFrame) -> pd.Series:
         angle = np.arccos(cos_angle)
     
     return angle
-
-def create_field_zone_feature(coords: pd.DataFrame) -> pd.DataFrame:
-    """
-    Create field zone features based on Y-coordinate.
-    
-    Zones:
-    - Wide areas: Y < 0.2 or Y > 0.8
-    - Central areas: 0.2 ≤ Y ≤ 0.8
-    """
-    is_wide = (coords['Y'] < WIDE_AREA_THRESHOLD) | (coords['Y'] > (1 - WIDE_AREA_THRESHOLD))
-    zone = pd.Series('central', index=coords.index)
-    zone[is_wide] = 'wide'
-    
-    # One-hot encode the zone
-    return pd.get_dummies(zone, prefix='zone')
 
 def create_interaction_terms(df: pd.DataFrame) -> pd.DataFrame:
     """Create interaction terms between situation and shotType."""
