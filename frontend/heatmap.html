@@ -4,279 +4,184 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>xG Heatmap Visualisation</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Custom styles can still be added here if needed, but Tailwind handles most of it. */
+        /* The specific linear-gradient for the legend is kept as an inline style as it's highly custom. */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f0f2f5;
-            color: #333;
-            margin: 0;
-            padding: 1rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            box-sizing: border-box;
-        }
-
-        h1 {
-            margin-bottom: 1rem;
-            color: #333;
-        }
-
-        .controls {
-            margin-bottom: 1.5rem;
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .control-group {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .control-group label {
-            font-weight: 500;
-            color: #333;
-        }
-
-        .control-group select {
-            padding: 0.5rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background-color: white;
-            font-size: 0.9rem;
-        }
-
-        .control-group button {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 4px;
-            background-color: #007bff;
-            color: white;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .control-group button:hover {
-            background-color: #0056b3;
-        }
-
-        .control-group button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-
-        #pitch-container {
-            width: 100%;
-            max-width: 1000px;
-            margin: 1rem auto;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        canvas {
-            display: block;
-            width: 100%;
-            height: auto;
-            background-color: transparent;
-        }
-
-        .legend {
-            margin-top: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .legend-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 3px;
-            border: 1px solid #ccc;
-        }
-
-        .legend-gradient {
-            width: 200px;
-            height: 20px;
-            background: linear-gradient(to right,
-                rgba(255, 255, 255, 0.0) 0%,
-                rgba(220, 230, 255, 0.196) 1%,
-                rgba(100, 149, 237, 0.392) 10%,
-                rgba(0, 128, 0, 0.588) 30%,
-                rgba(255, 255, 0, 0.784) 50%,
-                rgba(255, 140, 0, 0.863) 70%,
-                rgba(255, 0, 0, 1.0) 100%
-            );
-            border-radius: 3px;
-            border: 1px solid #ccc;
-        }
-
-        .legend-labels {
-            display: flex;
-            justify-content: space-between;
-            width: 200px;
-            font-size: 0.8rem;
-            margin-top: 0.25rem;
-        }
-
-        .status {
-            margin-top: 1rem;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            font-weight: 500;
-            text-align: center;
-        }
-
-        .status.loading {
-            background-color: #fff3cd;
-            color: #856404;
-        }
-
-        .status.error {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-
-        .status.success {
-            background-color: #d4edda;
-            color: #155724;
         }
     </style>
 </head>
-<body>
-    <h1>xG Heatmap Visualization</h1>
 
-    <div class="controls">
-        <div class="control-group">
-            <label for="situation-select">Situation:</label>
-            <select id="situation-select">
-                <option value="">All Situations</option>
-                <option value="OpenPlay">Open Play</option>
-                <option value="SetPiece">Set Piece</option>
-                <option value="DirectFreekick">Direct Free Kick</option>
-                <option value="FromCorner">From Corner</option>
-            </select>
-        </div>
-        <div class="control-group">
-            <label for="shot-type-select">Shot Type:</label>
-            <select id="shot-type-select">
-                <option value="">All Shot Types</option>
-                <option value="Head">Head</option>
-                <option value="RightFoot">Right Foot</option>
-                <option value="LeftFoot">Left Foot</option>
-                <option value="OtherBodyPart">Other Body Part</option>
-            </select>
-        </div>
-        <div class="control-group">
-            <button id="load-heatmap">Load Heatmap</button>
-        </div>
-    </div>
+<body class="bg-slate-100 text-slate-800 antialiased">
 
-    <div id="pitch-container">
-        <canvas id="football-pitch"></canvas>
-    </div>
+    <!-- Main container for the entire application layout -->
+    <div class="container mx-auto p-4 lg:p-8">
 
-    <div class="legend">
-        <div class="legend-item">
-            <span>xG Value:</span>
-            <div>
-                <div class="legend-gradient"></div>
-                <div class="legend-labels">
-                    <span>0.0</span>
-                    <span>0.2</span>
-                    <span>0.4</span>
-                    <span>0.6</span>
-                    <span>0.8</span>
-                    <span>1.0</span>
+        <!-- Header -->
+        <header class="mb-6 text-center lg:text-left">
+            <h1 class="text-4xl font-bold text-slate-900">xG Heatmap Visualisation</h1>
+            <p class="mt-1 text-lg text-slate-600">Interact with and explore the xG patterns of my models for different situations and shot types.</p>
+        </header>
+
+        <!-- Main Content Area: Uses Flexbox for a two-column layout on medium screens and up -->
+        <main class="flex flex-col lg:flex-row lg:gap-8">
+
+            <!-- Left Column: Contains the heatmap visualization and its legend -->
+            <div class="lg:w-3/4 w-full">
+                <div id="pitch-container" class="w-full bg-white shadow-lg rounded-lg overflow-hidden relative">
+                    <canvas id="football-pitch" class="block w-full h-auto"></canvas>
+                </div>
+
+                <!-- Legend for the heatmap colors -->
+                <div class="mt-4 flex flex-col items-center justify-center p-4 bg-white rounded-lg shadow-md">
+                    <span class="font-semibold text-slate-700">xG Value</span>
+                    <div class="mt-2">
+                        <!-- The gradient is defined with an inline style because it's highly specific -->
+                        <div class="w-64 h-5 rounded border border-slate-300" style="background: linear-gradient(to right,
+                                rgba(255, 255, 255, 0.0) 0%,
+                                rgba(220, 230, 255, 0.196) 1%,
+                                rgba(100, 149, 237, 0.392) 10%,
+                                rgba(0, 128, 0, 0.588) 30%,
+                                rgba(255, 255, 0, 0.784) 50%,
+                                rgba(255, 140, 0, 0.863) 70%,
+                                rgba(255, 0, 0, 1.0) 100%
+                            );">
+                        </div>
+                        <div class="flex justify-between w-64 text-xs text-slate-500 mt-1">
+                            <span>0.0</span>
+                            <span>0.2</span>
+                            <span>0.4</span>
+                            <span>0.6</span>
+                            <span>0.8</span>
+                            <span>1.0</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <!-- Right Column: Contains the user controls and status messages -->
+            <aside class="lg:w-1/4 w-full mt-6 lg:mt-0">
+                <div class="bg-white p-6 rounded-lg shadow-lg sticky top-8">
+                    <h2 class="text-2xl font-bold text-slate-800 border-b border-slate-200 pb-3 mb-4">Controls</h2>
+                    
+                    <!-- Situation Filter -->
+                    <div class="mb-4">
+                        <label for="situation-select" class="block text-sm font-medium text-slate-600 mb-1">Situation</label>
+                        <select id="situation-select" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                            <option value="">All Situations</option>
+                            <option value="OpenPlay">Open Play</option>
+                            <option value="SetPiece">Set Piece</option>
+                            <option value="DirectFreekick">Direct Free Kick</option>
+                            <option value="FromCorner">From Corner</option>
+                        </select>
+                    </div>
+
+                    <!-- Shot Type Filter -->
+                    <div class="mb-6">
+                        <label for="shot-type-select" class="block text-sm font-medium text-slate-600 mb-1">Shot Type</label>
+                        <select id="shot-type-select" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                            <option value="">All Shot Types</option>
+                            <option value="Head">Head</option>
+                            <option value="RightFoot">Right Foot</option>
+                            <option value="LeftFoot">Left Foot</option>
+                            <option value="OtherBodyPart">Other Body Part</option>
+                        </select>
+                    </div>
+
+                    <!-- Action Button -->
+                    <button id="load-heatmap" class="w-full py-2.5 px-4 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed">
+                        Load Heatmap
+                    </button>
+                    
+                    <!-- Status Message Area -->
+                    <div id="status" class="mt-4 text-center p-3 rounded-md border text-sm font-medium" style="display: none;"></div>
+                </div>
+            </aside>
+
+        </main>
     </div>
 
-    <div id="status" class="status" style="display: none;"></div>
-
     <script>
-        // DOM elements
+        // =================================================================================
+        // SCRIPT START: HEATMAP VISUALIZATION LOGIC
+        // The core functionality of this script is preserved from the original version.
+        // It has been slightly reorganized for better readability and maintainability.
+        // =================================================================================
+
+        // --- DOM Element Selection ---
         const canvas = document.getElementById('football-pitch');
         const ctx = canvas.getContext('2d');
         const pitchContainer = document.getElementById('pitch-container');
         const statusDiv = document.getElementById('status');
         const loadButton = document.getElementById('load-heatmap');
+        const situationSelect = document.getElementById('situation-select');
+        const shotTypeSelect = document.getElementById('shot-type-select');
 
-        // Pitch dimensions (FIFA Standard)
+        // --- Pitch Constants (FIFA Standard) ---
+        // These constants define the dimensions of the pitch in meters.
+        // They are crucial for ensuring the proportions of the drawing are correct.
         const PITCH_LENGTH_METERS = 105;
         const PITCH_WIDTH_METERS = 68;
         const GOAL_WIDTH_METERS = 7.32;
         const GOAL_DEPTH_METERS = 2;
-        const PADDING_METERS = 3;
+        const PADDING_METERS = 3; // Padding around the pitch.
         const TOTAL_WIDTH_METERS = PITCH_LENGTH_METERS + 2 * PADDING_METERS;
-        const ASPECT_RATIO = TOTAL_WIDTH_METERS / PITCH_WIDTH_METERS;
+        const TOTAL_HEIGHT_METERS = PITCH_WIDTH_METERS + 2 * PADDING_METERS;
+        const ASPECT_RATIO = TOTAL_WIDTH_METERS / TOTAL_HEIGHT_METERS;
 
-        // Pitch markings
+        // --- Pitch Markings Constants (in meters) ---
         const GOAL_AREA_LENGTH = 5.5;
         const GOAL_AREA_WIDTH = 18.32;
         const PENALTY_AREA_LENGTH = 16.5;
         const PENALTY_AREA_WIDTH = 40.32;
         const CENTER_CIRCLE_RADIUS = 9.15;
         const PENALTY_SPOT_DISTANCE = 11;
+        
+        // --- State and Configuration ---
+        let scale; // Calculated dynamically based on container size
+        let heatmapData = null; // Holds the fetched heatmap data
+        const LINE_COLOR = '#000080'; // Navy blue for pitch lines
 
-        // State
-        let scale;
-        let heatmapData = null;
-        const LINE_COLOR = '#000080';
-
-        // Color mapping for xG values - returns RGBA object
+        // --- Color Mapping for Heatmap ---
+        // Defines the color gradient for xG values from 0.0 to 1.0.
+        // Returns an RGBA object for efficient drawing with ImageData.
         const colorStops = [
-            { value: 0.0, color: { r: 255, g: 255, b: 255, a: 0 } }, // Pure white, fully transparent
-            { value: 0.01, color: { r: 220, g: 230, b: 255, a: 50 } }, // Very light blue, low alpha (approx 0.2)
-            { value: 0.1, color: { r: 100, g: 149, b: 237, a: 100 } }, // CornflowerBlue, medium alpha (approx 0.4)
-            { value: 0.3, color: { r: 0, g: 128, b: 0, a: 150 } },   // Green, higher alpha (approx 0.6)
-            { value: 0.5, color: { r: 255, g: 255, b: 0, a: 200 } }, // Yellow, even higher alpha (approx 0.8)
-            { value: 0.7, color: { r: 255, g: 140, b: 0, a: 220 } }, // DarkOrange, high alpha (approx 0.9)
-            { value: 1.0, color: { r: 255, g: 0, b: 0, a: 255 } }    // Red, full alpha (1.0)
+            { value: 0.0,  color: { r: 255, g: 255, b: 255, a: 0 } },   // Transparent
+            { value: 0.01, color: { r: 220, g: 230, b: 255, a: 50 } },  // Light Blue
+            { value: 0.1,  color: { r: 100, g: 149, b: 237, a: 100 } }, // Cornflower Blue
+            { value: 0.3,  color: { r: 0,   g: 128, b: 0,   a: 150 } }, // Green
+            { value: 0.5,  color: { r: 255, g: 255, b: 0,   a: 200 } }, // Yellow
+            { value: 0.7,  color: { r: 255, g: 140, b: 0,   a: 220 } }, // Dark Orange
+            { value: 1.0,  color: { r: 255, g: 0,   b: 0,   a: 255 } }    // Red
         ];
 
+        /**
+         * Calculates the interpolated RGBA color for a given xG value.
+         * @param {number} xgValue - The xG value (0.0 to 1.0).
+         * @returns {{r: number, g: number, b: number, a: number}} The RGBA color object.
+         */
         function getHeatmapColorRGBA(xgValue) {
-            const intensity = Math.min(Math.max(xgValue, 0), 1); // Ensure value is between 0 and 1
+            const intensity = Math.min(Math.max(xgValue, 0), 1);
 
-            if (intensity === 0) {
-                return colorStops[0].color; // Return the transparent white for 0.0
-            }
+            if (intensity === 0) return colorStops[0].color;
 
             // Find the two color stops to interpolate between
             let lowerStop = colorStops[0];
             let upperStop = colorStops[colorStops.length - 1];
-
             for (let i = 0; i < colorStops.length - 1; i++) {
-                if (intensity >= colorStops[i].value && intensity <= colorStops[i+1].value) {
+                if (intensity >= colorStops[i].value && intensity <= colorStops[i + 1].value) {
                     lowerStop = colorStops[i];
-                    upperStop = colorStops[i+1];
+                    upperStop = colorStops[i + 1];
                     break;
                 }
             }
 
             // Calculate interpolation factor (t)
             const range = upperStop.value - lowerStop.value;
-            let t = 0;
-            if (range > 0) {
-                t = (intensity - lowerStop.value) / range;
-            }
+            const t = (range > 0) ? (intensity - lowerStop.value) / range : 0;
 
             // Interpolate R, G, B, A components
             const r = Math.round(lowerStop.color.r + t * (upperStop.color.r - lowerStop.color.r));
@@ -287,18 +192,20 @@
             return { r, g, b, a };
         }
 
-        // Color mapping for xG values - returns CSS color string (kept for legend)
-        function getHeatmapColor(xgValue) {
-            const color = getHeatmapColorRGBA(xgValue);
-            return `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a / 255})`;
-        }
+        // --- Canvas Drawing Functions ---
 
+        /**
+         * Converts coordinates from meters to canvas pixels.
+         * @param {number} metersX - X coordinate in meters.
+         * @param {number} metersY - Y coordinate in meters.
+         * @returns {{x: number, y: number}} Pixel coordinates.
+         */
         function metersToPixels(metersX, metersY) {
             const px = (metersX + PADDING_METERS) * scale;
-            const py = (PITCH_WIDTH_METERS - metersY) * scale;
+            const py = (PITCH_WIDTH_METERS - metersY + PADDING_METERS) * scale;
             return { x: px, y: py };
         }
-
+        
         function drawLine(x1m, y1m, x2m, y2m) {
             const p1 = metersToPixels(x1m, y1m);
             const p2 = metersToPixels(x2m, y2m);
@@ -313,13 +220,12 @@
             const radius_px = radius_m * scale;
             ctx.beginPath();
             ctx.arc(p.x, p.y, radius_px, startAngle, endAngle, anticlockwise);
-            if (fill) {
-                ctx.fill();
-            } else {
-                ctx.stroke();
-            }
+            if (fill) ctx.fill(); else ctx.stroke();
         }
 
+        /**
+         * Draws all the lines and markings of the football pitch.
+         */
         function drawPitchMarkings() {
             ctx.strokeStyle = LINE_COLOR;
             ctx.fillStyle = LINE_COLOR;
@@ -328,153 +234,125 @@
             // Goals
             const goalY1 = (PITCH_WIDTH_METERS - GOAL_WIDTH_METERS) / 2;
             const goalY2 = (PITCH_WIDTH_METERS + GOAL_WIDTH_METERS) / 2;
-
-            // Left Goal
             drawLine(0, goalY1, -GOAL_DEPTH_METERS, goalY1);
             drawLine(0, goalY2, -GOAL_DEPTH_METERS, goalY2);
             drawLine(-GOAL_DEPTH_METERS, goalY1, -GOAL_DEPTH_METERS, goalY2);
-
-            // Right Goal
             drawLine(PITCH_LENGTH_METERS, goalY1, PITCH_LENGTH_METERS + GOAL_DEPTH_METERS, goalY1);
             drawLine(PITCH_LENGTH_METERS, goalY2, PITCH_LENGTH_METERS + GOAL_DEPTH_METERS, goalY2);
             drawLine(PITCH_LENGTH_METERS + GOAL_DEPTH_METERS, goalY1, PITCH_LENGTH_METERS + GOAL_DEPTH_METERS, goalY2);
 
-            // Pitch boundary
+            // Pitch boundary and halfway line
             drawLine(0, 0, PITCH_LENGTH_METERS, 0);
             drawLine(0, PITCH_WIDTH_METERS, PITCH_LENGTH_METERS, PITCH_WIDTH_METERS);
             drawLine(0, 0, 0, PITCH_WIDTH_METERS);
             drawLine(PITCH_LENGTH_METERS, 0, PITCH_LENGTH_METERS, PITCH_WIDTH_METERS);
-
-            // Halfway line
             drawLine(PITCH_LENGTH_METERS / 2, 0, PITCH_LENGTH_METERS / 2, PITCH_WIDTH_METERS);
 
             // Center circle and spot
             drawCircle(PITCH_LENGTH_METERS / 2, PITCH_WIDTH_METERS / 2, CENTER_CIRCLE_RADIUS);
             drawCircle(PITCH_LENGTH_METERS / 2, PITCH_WIDTH_METERS / 2, 0.3, true);
 
-            // Left side markings
+            // Left side penalty and goal areas
             drawLine(0, (PITCH_WIDTH_METERS - PENALTY_AREA_WIDTH) / 2, PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS - PENALTY_AREA_WIDTH) / 2);
             drawLine(0, (PITCH_WIDTH_METERS + PENALTY_AREA_WIDTH) / 2, PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS + PENALTY_AREA_WIDTH) / 2);
             drawLine(PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS - PENALTY_AREA_WIDTH) / 2, PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS + PENALTY_AREA_WIDTH) / 2);
-            
             drawLine(0, (PITCH_WIDTH_METERS - GOAL_AREA_WIDTH) / 2, GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS - GOAL_AREA_WIDTH) / 2);
             drawLine(0, (PITCH_WIDTH_METERS + GOAL_AREA_WIDTH) / 2, GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS + GOAL_AREA_WIDTH) / 2);
             drawLine(GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS - GOAL_AREA_WIDTH) / 2, GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS + GOAL_AREA_WIDTH) / 2);
-            
             drawCircle(PENALTY_SPOT_DISTANCE, PITCH_WIDTH_METERS / 2, 0.3, true);
-            
             const leftArcAngle = Math.acos((PENALTY_AREA_LENGTH - PENALTY_SPOT_DISTANCE) / CENTER_CIRCLE_RADIUS);
             drawCircle(PENALTY_SPOT_DISTANCE, PITCH_WIDTH_METERS / 2, CENTER_CIRCLE_RADIUS, false, -leftArcAngle, leftArcAngle);
 
-            // Right side markings
+            // Right side penalty and goal areas
             const rightPenaltySpotX = PITCH_LENGTH_METERS - PENALTY_SPOT_DISTANCE;
-            
             drawLine(PITCH_LENGTH_METERS, (PITCH_WIDTH_METERS - PENALTY_AREA_WIDTH) / 2, PITCH_LENGTH_METERS - PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS - PENALTY_AREA_WIDTH) / 2);
             drawLine(PITCH_LENGTH_METERS, (PITCH_WIDTH_METERS + PENALTY_AREA_WIDTH) / 2, PITCH_LENGTH_METERS - PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS + PENALTY_AREA_WIDTH) / 2);
             drawLine(PITCH_LENGTH_METERS - PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS - PENALTY_AREA_WIDTH) / 2, PITCH_LENGTH_METERS - PENALTY_AREA_LENGTH, (PITCH_WIDTH_METERS + PENALTY_AREA_WIDTH) / 2);
-            
             drawLine(PITCH_LENGTH_METERS, (PITCH_WIDTH_METERS - GOAL_AREA_WIDTH) / 2, PITCH_LENGTH_METERS - GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS - GOAL_AREA_WIDTH) / 2);
             drawLine(PITCH_LENGTH_METERS, (PITCH_WIDTH_METERS + GOAL_AREA_WIDTH) / 2, PITCH_LENGTH_METERS - GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS + GOAL_AREA_WIDTH) / 2);
             drawLine(PITCH_LENGTH_METERS - GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS - GOAL_AREA_WIDTH) / 2, PITCH_LENGTH_METERS - GOAL_AREA_LENGTH, (PITCH_WIDTH_METERS + GOAL_AREA_WIDTH) / 2);
-
             drawCircle(rightPenaltySpotX, PITCH_WIDTH_METERS / 2, 0.3, true);
-            
             const rightArcAngle = Math.acos((rightPenaltySpotX - (PITCH_LENGTH_METERS - PENALTY_AREA_LENGTH)) / CENTER_CIRCLE_RADIUS);
-            drawCircle(rightPenaltySpotX, PITCH_WIDTH_METERS / 2, CENTER_CIRCLE_RADIUS, false, Math.PI - rightArcAngle, Math.PI + rightArcAngle, false);
+            drawCircle(rightPenaltySpotX, PITCH_WIDTH_METERS / 2, CENTER_CIRCLE_RADIUS, false, Math.PI - rightArcAngle, Math.PI + rightArcAngle);
         }
 
+        /**
+         * Draws the heatmap onto the canvas using ImageData for performance and smoothness.
+         * Uses bilinear interpolation for a less "blocky" appearance.
+         */
         function drawHeatmap() {
             if (!heatmapData) return;
 
-            const xCoords = heatmapData.grid_definition.x_coords;
-            const yCoords = heatmapData.grid_definition.y_coords;
+            const { x_coords, y_coords } = heatmapData.grid_definition;
             const heatmap = heatmapData.heatmap;
+            const cellWidth = x_coords.length > 1 ? x_coords[1] - x_coords[0] : 0.01;
+            const cellHeight = y_coords.length > 1 ? y_coords[1] - y_coords[0] : 0.01;
 
-            // Calculate grid cell size in meters
-            const cellWidth = xCoords.length > 1 ? xCoords[1] - xCoords[0] : 0.01;
-            const cellHeight = yCoords.length > 1 ? yCoords[1] - yCoords[0] : 0.01;
-
-            // Create ImageData for smooth rendering
             const imageData = ctx.createImageData(canvas.width, canvas.height);
             const data = imageData.data;
 
-            // Fill the image data with heatmap colors
-            for (let pixelY = 0; pixelY < canvas.height; pixelY++) {
-                for (let pixelX = 0; pixelX < canvas.width; pixelX++) {
-                    // Convert pixel coordinates back to meters
-                    const meterX = (pixelX / scale) - PADDING_METERS;
-                    const meterY = PITCH_WIDTH_METERS - (pixelY / scale);
-                    
-                    // Only draw within pitch boundaries
-                    if (meterX >= 0 && meterX <= PITCH_LENGTH_METERS && 
-                        meterY >= 0 && meterY <= PITCH_WIDTH_METERS) {
-                        
-                        // Find the closest grid point using bilinear interpolation
-                        const xIndex = Math.max(0, Math.min(xCoords.length - 1, 
-                            Math.floor(meterX / cellWidth)));
-                        const yIndex = Math.max(0, Math.min(yCoords.length - 1, 
-                            Math.floor(meterY / cellHeight)));
-                        
+            for (let py = 0; py < canvas.height; py++) {
+                for (let px = 0; px < canvas.width; px++) {
+                    const meterX = (px / scale) - PADDING_METERS;
+                    const meterY = PITCH_WIDTH_METERS + PADDING_METERS - (py / scale);
+
+                    if (meterX >= 0 && meterX <= PITCH_LENGTH_METERS && meterY >= 0 && meterY <= PITCH_WIDTH_METERS) {
+                        const xIndex = Math.floor(meterX / cellWidth);
+                        const yIndex = Math.floor(meterY / cellHeight);
+
                         let xgValue = 0;
-                        
-                        // Bilinear interpolation for smoother transitions
-                        if (xIndex < xCoords.length - 1 && yIndex < yCoords.length - 1) {
-                            const x1 = xCoords[xIndex];
-                            const x2 = xCoords[xIndex + 1];
-                            const y1 = yCoords[yIndex];
-                            const y2 = yCoords[yIndex + 1];
-                            
+                        if (xIndex < x_coords.length - 1 && yIndex < y_coords.length - 1 && y_coords.length > 1) {
+                            const x1 = x_coords[xIndex], x2 = x_coords[xIndex + 1];
+                            const y1 = y_coords[yIndex], y2 = y_coords[yIndex + 1];
                             const xWeight = (meterX - x1) / (x2 - x1);
                             const yWeight = (meterY - y1) / (y2 - y1);
-                            
-                            // Get the four surrounding values
-                            const v00 = heatmap[yIndex][xIndex] || 0;
-                            const v10 = heatmap[yIndex][xIndex + 1] || 0;
-                            const v01 = heatmap[yIndex + 1] ? heatmap[yIndex + 1][xIndex] || 0 : 0;
-                            const v11 = heatmap[yIndex + 1] ? heatmap[yIndex + 1][xIndex + 1] || 0 : 0;
-                            
-                            // Bilinear interpolation
+
+                            const v00 = heatmap[yIndex]?.[xIndex] || 0;
+                            const v10 = heatmap[yIndex]?.[xIndex + 1] || 0;
+                            const v01 = heatmap[yIndex + 1]?.[xIndex] || 0;
+                            const v11 = heatmap[yIndex + 1]?.[xIndex + 1] || 0;
+
                             const top = v00 * (1 - xWeight) + v10 * xWeight;
                             const bottom = v01 * (1 - xWeight) + v11 * xWeight;
                             xgValue = top * (1 - yWeight) + bottom * yWeight;
                         } else {
-                            // Fallback to nearest neighbor
-                            xgValue = heatmap[yIndex] ? heatmap[yIndex][xIndex] || 0 : 0;
+                            xgValue = heatmap[yIndex]?.[xIndex] || 0; // Fallback to nearest neighbor
                         }
-                        
+
                         if (xgValue > 0) {
                             const color = getHeatmapColorRGBA(xgValue);
-                            const pixelIndex = (pixelY * canvas.width + pixelX) * 4;
-                            
-                            data[pixelIndex] = color.r;     // Red
-                            data[pixelIndex + 1] = color.g; // Green
-                            data[pixelIndex + 2] = color.b; // Blue
-                            data[pixelIndex + 3] = color.a; // Alpha
+                            const pixelIndex = (py * canvas.width + px) * 4;
+                            data[pixelIndex] = color.r;
+                            data[pixelIndex + 1] = color.g;
+                            data[pixelIndex + 2] = color.b;
+                            data[pixelIndex + 3] = color.a;
                         }
                     }
                 }
             }
-            
-            // Draw the image data to canvas
             ctx.putImageData(imageData, 0, 0);
         }
-
+        
+        /**
+         * Main drawing function. Clears the canvas and redraws everything.
+         */
         function drawComplete() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Enable image smoothing for better quality
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
             
-            // Draw heatmap first (behind the pitch lines)
+            // Draw heatmap first, so it's underneath the pitch lines
             drawHeatmap();
             
-            // Draw pitch markings on top with slight transparency so heatmap shows through
+            // Draw pitch markings on top with slight transparency
             ctx.globalAlpha = 0.8;
             drawPitchMarkings();
-            ctx.globalAlpha = 1.0; // Reset alpha
+            ctx.globalAlpha = 1.0; // Reset for other operations
         }
-
+        
+        /**
+         * Sets up the canvas dimensions based on its container size and redraws.
+         */
         function setupCanvas() {
             const containerWidth = pitchContainer.clientWidth;
             canvas.width = containerWidth;
@@ -483,9 +361,30 @@
             drawComplete();
         }
 
+        // --- UI and Data Handling ---
+
+        /**
+         * Displays a status message to the user.
+         * @param {string} message - The message to display.
+         * @param {'loading' | 'error' | 'success'} type - The type of message.
+         */
         function showStatus(message, type) {
             statusDiv.textContent = message;
-            statusDiv.className = `status ${type}`;
+            // Reset classes
+            statusDiv.classList.remove(
+                'bg-yellow-100', 'text-yellow-800', 'border-yellow-300',
+                'bg-red-100', 'text-red-800', 'border-red-300',
+                'bg-green-100', 'text-green-800', 'border-green-300'
+            );
+            
+            // Apply new classes based on type
+            if (type === 'loading') {
+                statusDiv.classList.add('bg-yellow-100', 'text-yellow-800', 'border-yellow-300');
+            } else if (type === 'error') {
+                statusDiv.classList.add('bg-red-100', 'text-red-800', 'border-red-300');
+            } else if (type === 'success') {
+                statusDiv.classList.add('bg-green-100', 'text-green-800', 'border-green-300');
+            }
             statusDiv.style.display = 'block';
         }
 
@@ -493,9 +392,12 @@
             statusDiv.style.display = 'none';
         }
 
+        /**
+         * Fetches heatmap data from the backend API based on selected filters.
+         */
         async function loadHeatmapData() {
-            const situation = document.getElementById('situation-select').value || null;
-            const shotType = document.getElementById('shot-type-select').value || null;
+            const situation = situationSelect.value || null;
+            const shotType = shotTypeSelect.value || null;
             
             showStatus('Loading heatmap data...', 'loading');
             loadButton.disabled = true;
@@ -507,14 +409,14 @@
                 params.append('max_length', PITCH_LENGTH_METERS.toString());
                 params.append('max_width', PITCH_WIDTH_METERS.toString());
 
+                // IMPORTANT: Replace with your actual backend API endpoint
                 const response = await fetch(`http://127.0.0.1:5000/api/predict/grid?${params}`);
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(`HTTP error! Status: ${response.status}`);
                 }
                 
-                const data = await response.json();
-                heatmapData = data;
+                heatmapData = await response.json();
                 
                 drawComplete();
                 showStatus('Heatmap loaded successfully!', 'success');
@@ -522,18 +424,27 @@
                 
             } catch (error) {
                 console.error('Error loading heatmap:', error);
-                showStatus('Error loading heatmap data. Please check your backend connection.', 'error');
+                heatmapData = null; // Clear old data on error
+                drawComplete(); // Redraw pitch without heatmap
+                showStatus('Failed to load data. Please check the backend connection.', 'error');
             } finally {
                 loadButton.disabled = false;
             }
         }
 
-        // Event listeners
+        // --- Event Listeners and Initialization ---
+
+        // Redraw canvas on window resize to maintain proportions
         window.addEventListener('resize', setupCanvas);
+        
+        // Load data when the button is clicked
         loadButton.addEventListener('click', loadHeatmapData);
 
-        // Initialize
-        window.onload = setupCanvas;
+        // Initial setup when the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            setupCanvas();
+        });
+
     </script>
 </body>
 </html>
