@@ -238,9 +238,9 @@
         let heatmapData = null;
         const LINE_COLOR = '#000080';
 
-        // Color mapping for xG values
-        function getHeatmapColor(xgValue) {
-            if (xgValue === 0) return 'rgba(0, 0, 0, 0)'; // Transparent for 0 values
+        // Color mapping for xG values - returns RGBA object
+        function getHeatmapColorRGBA(xgValue) {
+            if (xgValue === 0) return { r: 0, g: 0, b: 0, a: 0 };
             
             // Normalize xG value (0-1) to color intensity
             const intensity = Math.min(xgValue, 1);
@@ -280,9 +280,15 @@
             }
             
             // Adjust alpha based on intensity
-            const alpha = Math.max(0.1, intensity * 0.9);
+            const alpha = Math.floor(Math.max(25, intensity * 230)); // 25-230 range for better visibility
             
-            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            return { r, g, b, a: alpha };
+        }
+
+        // Color mapping for xG values - returns CSS color string (kept for legend)
+        function getHeatmapColor(xgValue) {
+            const color = getHeatmapColorRGBA(xgValue);
+            return `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a / 255})`;
         }
 
         function metersToPixels(metersX, metersY) {
@@ -386,37 +392,85 @@
             const cellWidth = xCoords.length > 1 ? xCoords[1] - xCoords[0] : 0.01;
             const cellHeight = yCoords.length > 1 ? yCoords[1] - yCoords[0] : 0.01;
 
-            // Draw heatmap cells
-            for (let i = 0; i < yCoords.length; i++) {
-                for (let j = 0; j < xCoords.length; j++) {
-                    const xgValue = heatmap[i][j];
-                    if (xgValue > 0) {
-                        const x = xCoords[j];
-                        const y = yCoords[i];
+            // Create ImageData for smooth rendering
+            const imageData = ctx.createImageData(canvas.width, canvas.height);
+            const data = imageData.data;
+
+            // Fill the image data with heatmap colors
+            for (let pixelY = 0; pixelY < canvas.height; pixelY++) {
+                for (let pixelX = 0; pixelX < canvas.width; pixelX++) {
+                    // Convert pixel coordinates back to meters
+                    const meterX = (pixelX / scale) - PADDING_METERS;
+                    const meterY = PITCH_WIDTH_METERS - (pixelY / scale);
+                    
+                    // Only draw within pitch boundaries
+                    if (meterX >= 0 && meterX <= PITCH_LENGTH_METERS && 
+                        meterY >= 0 && meterY <= PITCH_WIDTH_METERS) {
                         
-                        // Convert to pixel coordinates
-                        const topLeft = metersToPixels(x - cellWidth/2, y + cellHeight/2);
-                        const bottomRight = metersToPixels(x + cellWidth/2, y - cellHeight/2);
+                        // Find the closest grid point using bilinear interpolation
+                        const xIndex = Math.max(0, Math.min(xCoords.length - 1, 
+                            Math.floor(meterX / cellWidth)));
+                        const yIndex = Math.max(0, Math.min(yCoords.length - 1, 
+                            Math.floor(meterY / cellHeight)));
                         
-                        const width = bottomRight.x - topLeft.x;
-                        const height = bottomRight.y - topLeft.y;
+                        let xgValue = 0;
                         
-                        // Draw filled rectangle with color based on xG value
-                        ctx.fillStyle = getHeatmapColor(xgValue);
-                        ctx.fillRect(topLeft.x, topLeft.y, width, height);
+                        // Bilinear interpolation for smoother transitions
+                        if (xIndex < xCoords.length - 1 && yIndex < yCoords.length - 1) {
+                            const x1 = xCoords[xIndex];
+                            const x2 = xCoords[xIndex + 1];
+                            const y1 = yCoords[yIndex];
+                            const y2 = yCoords[yIndex + 1];
+                            
+                            const xWeight = (meterX - x1) / (x2 - x1);
+                            const yWeight = (meterY - y1) / (y2 - y1);
+                            
+                            // Get the four surrounding values
+                            const v00 = heatmap[yIndex][xIndex] || 0;
+                            const v10 = heatmap[yIndex][xIndex + 1] || 0;
+                            const v01 = heatmap[yIndex + 1] ? heatmap[yIndex + 1][xIndex] || 0 : 0;
+                            const v11 = heatmap[yIndex + 1] ? heatmap[yIndex + 1][xIndex + 1] || 0 : 0;
+                            
+                            // Bilinear interpolation
+                            const top = v00 * (1 - xWeight) + v10 * xWeight;
+                            const bottom = v01 * (1 - xWeight) + v11 * xWeight;
+                            xgValue = top * (1 - yWeight) + bottom * yWeight;
+                        } else {
+                            // Fallback to nearest neighbor
+                            xgValue = heatmap[yIndex] ? heatmap[yIndex][xIndex] || 0 : 0;
+                        }
+                        
+                        if (xgValue > 0) {
+                            const color = getHeatmapColorRGBA(xgValue);
+                            const pixelIndex = (pixelY * canvas.width + pixelX) * 4;
+                            
+                            data[pixelIndex] = color.r;     // Red
+                            data[pixelIndex + 1] = color.g; // Green
+                            data[pixelIndex + 2] = color.b; // Blue
+                            data[pixelIndex + 3] = color.a; // Alpha
+                        }
                     }
                 }
             }
+            
+            // Draw the image data to canvas
+            ctx.putImageData(imageData, 0, 0);
         }
 
         function drawComplete() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
+            // Enable image smoothing for better quality
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            
             // Draw heatmap first (behind the pitch lines)
             drawHeatmap();
             
-            // Draw pitch markings on top
+            // Draw pitch markings on top with slight transparency so heatmap shows through
+            ctx.globalAlpha = 0.8;
             drawPitchMarkings();
+            ctx.globalAlpha = 1.0; // Reset alpha
         }
 
         function setupCanvas() {
