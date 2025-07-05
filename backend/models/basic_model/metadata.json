@@ -1,7 +1,7 @@
 {
     "model_name": "basic_model",
     "model_type": "Logistic Regression",
-    "brier_score": 0.08568619097697867,
+    "brier_score": 0.08569268710429279,
     "best_parameters": {
         "logreg__C": 0.0030595245107331143,
         "logreg__penalty": "l1",
@@ -11,9 +11,7 @@
         "X",
         "Y",
         "distance_to_goal",
-        "angle_to_goal",
-        "zone_central",
-        "zone_wide"
+        "angle_to_goal"
     ],
     "test_set_size": 41223
 }

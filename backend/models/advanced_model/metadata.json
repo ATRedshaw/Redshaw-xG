@@ -1,7 +1,7 @@
 {
     "model_name": "advanced_model",
     "model_type": "Logistic Regression",
-    "brier_score": 0.07841734572630568,
+    "brier_score": 0.07842072044795786,
     "best_parameters": {
         "logreg__C": 0.014272548556901481,
         "logreg__penalty": "l1",
@@ -21,8 +21,6 @@
         "shotType_LeftFoot",
         "shotType_OtherBodyPart",
         "shotType_RightFoot",
-        "zone_central",
-        "zone_wide",
         "interaction_DirectFreekick_LeftFoot",
         "interaction_DirectFreekick_RightFoot",
         "interaction_FromCorner_Head",

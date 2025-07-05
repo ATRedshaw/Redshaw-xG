@@ -1,10 +1,10 @@
 {
     "model_name": "situation_model",
     "model_type": "Logistic Regression",
-    "brier_score": 0.07985591921099297,
+    "brier_score": 0.07984858610894677,
     "best_parameters": {
-        "logreg__C": 0.002171810808202343,
-        "logreg__penalty": "l2",
+        "logreg__C": 0.014272548556901481,
+        "logreg__penalty": "l1",
         "logreg__solver": "saga"
     },
     "features": [
@@ -12,8 +12,6 @@
         "Y",
         "distance_to_goal",
         "angle_to_goal",
-        "zone_central",
-        "zone_wide",
         "situation_DirectFreekick",
         "situation_FromCorner",
         "situation_OpenPlay",

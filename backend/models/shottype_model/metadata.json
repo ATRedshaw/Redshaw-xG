@@ -1,7 +1,7 @@
 {
     "model_name": "shottype_model",
     "model_type": "Logistic Regression",
-    "brier_score": 0.0824461905408043,
+    "brier_score": 0.08248546778090501,
     "best_parameters": {
         "logreg__C": 0.005039387655561005,
         "logreg__penalty": "l1",
@@ -12,8 +12,6 @@
         "Y",
         "distance_to_goal",
         "angle_to_goal",
-        "zone_central",
-        "zone_wide",
         "shotType_Head",
         "shotType_LeftFoot",
         "shotType_OtherBodyPart",
