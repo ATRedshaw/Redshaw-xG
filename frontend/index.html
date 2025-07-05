@@ -110,7 +110,10 @@
 
         // --- STATE & CONFIGURATION ---
         let scale; // Pixels per meter, calculated dynamically
-        let plottedPoint = null; // Stores {x, y} in meters
+let currentPoint = null; // Stores {x, y} in meters, for animation
+        let targetPoint = null; // Stores the target {x, y} in meters after a click
+        let animationStartTime = null;
+        const ANIMATION_DURATION_MS = 200; // milliseconds for animation
         const POINT_RADIUS_PX = 6;
         const LINE_COLOR = '#000080'; // Navy Blue
         const POINT_COLOR = '#d32f2f'; // Red
@@ -202,13 +205,7 @@
             drawCircle(rightPenaltySpotX, PITCH_WIDTH_METERS / 2, CENTER_CIRCLE_RADIUS, false, Math.PI - rightArcAngle, Math.PI + rightArcAngle);
             
             // 3. Draw the plotted point if it exists
-            if (plottedPoint) {
-                ctx.fillStyle = POINT_COLOR;
-                const p = metersToPixels(plottedPoint.x, plottedPoint.y);
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, POINT_RADIUS_PX, 0, 2 * Math.PI);
-                ctx.fill();
-            }
+            drawDot();
         }
         
         /**
@@ -247,9 +244,10 @@
             
             // Constrain the point to be within the field of play
             if (metersX >= 0 && metersX <= PITCH_LENGTH_METERS && metersY >= 0 && metersY <= PITCH_WIDTH_METERS) {
-                plottedPoint = { x: metersX, y: metersY };
+                targetPoint = { x: metersX, y: metersY };
                 coordsText.textContent = `Coordinates: X: ${metersX.toFixed(1)}m, Y: ${metersY.toFixed(1)}m`;
-                drawPitch();
+                animationStartTime = performance.now();
+                requestAnimationFrame(animateDot);
                 callXGPrediction(metersX, metersY);
             }
         }
@@ -301,10 +299,11 @@
         function handleSituationChange() {
             if (situationSelect.value === 'Penalty') {
                 // Automatically plot the point at the right penalty spot
-                plottedPoint = { x: PENALTY_SPOT_RIGHT_X, y: PENALTY_SPOT_Y };
-                coordsText.textContent = `Coordinates: X: ${plottedPoint.x.toFixed(1)}m, Y: ${plottedPoint.y.toFixed(1)}m (Penalty Spot)`;
-                drawPitch();
-                callXGPrediction(plottedPoint.x, plottedPoint.y);
+                targetPoint = { x: PENALTY_SPOT_RIGHT_X, y: PENALTY_SPOT_Y };
+                coordsText.textContent = `Coordinates: X: ${targetPoint.x.toFixed(1)}m, Y: ${targetPoint.y.toFixed(1)}m (Penalty Spot)`;
+                animationStartTime = performance.now();
+                requestAnimationFrame(animateDot);
+                callXGPrediction(targetPoint.x, targetPoint.y);
                 // Disable shot type dropdown and reset its value
                 shotTypeSelect.disabled = true;
                 shotTypeSelect.value = ''; // "All Shot Types"
@@ -320,8 +319,49 @@
          * Re-triggers the prediction if a filter is changed and a point exists.
          */
         function updateXGPrediction() {
-            if (plottedPoint) {
-                callXGPrediction(plottedPoint.x, plottedPoint.y);
+            if (currentPoint) {
+                callXGPrediction(currentPoint.x, currentPoint.y);
+            }
+        }
+
+        /**
+         * Draws the animated dot on the canvas.
+         */
+        function drawDot() {
+            if (currentPoint) {
+                ctx.fillStyle = POINT_COLOR;
+                const p = metersToPixels(currentPoint.x, currentPoint.y);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, POINT_RADIUS_PX, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+
+        /**
+         * Animates the dot's movement from its current position to the target position.
+         * @param {DOMHighResTimeStamp} currentTime - The current time provided by requestAnimationFrame.
+         */
+        function animateDot(currentTime) {
+            if (!animationStartTime) animationStartTime = currentTime;
+            const elapsedTime = currentTime - animationStartTime;
+            const progress = Math.min(elapsedTime / ANIMATION_DURATION_MS, 1); // Clamp between 0 and 1
+
+            if (currentPoint === null) {
+                currentPoint = { ...targetPoint }; // Initialize if first time
+            }
+
+            // Linear interpolation for smooth movement
+            currentPoint.x = currentPoint.x + (targetPoint.x - currentPoint.x) * progress;
+            currentPoint.y = currentPoint.y + (targetPoint.y - currentPoint.y) * progress;
+
+            drawPitch(); // Redraw the entire pitch with the updated dot position
+
+            if (progress < 1) {
+                requestAnimationFrame(animateDot); // Continue animation
+            } else {
+                animationStartTime = null; // Reset for next animation
+                currentPoint = { ...targetPoint }; // Ensure it lands exactly on target
+                drawPitch(); // Final draw to ensure correct position
             }
         }
         
