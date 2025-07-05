@@ -2,11 +2,21 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from utils.helper import load_models, load_metadata_features, determine_model, verify_valid_situation, verify_valid_shot_type, verify_all_features_present
 from utils.preprocess import preprocess
+import json
 
 app = Flask(__name__)
 CORS(app)
 models = load_models()
 features = load_metadata_features()
+
+# Load heatmap data once at startup
+heatmap_data_path = 'heatmaps/heatmaps.json'
+try:
+    with open(heatmap_data_path, 'r') as f:
+        heatmap_data = json.load(f)
+except FileNotFoundError:
+    # In a real app, you might want to log this error.
+    heatmap_data = None
 
 # Add CORS
 
@@ -84,6 +94,56 @@ def predict():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/predict/grid', methods=['GET'])
+def predict_grid():
+    """GET endpoint to retrieve a heatmap grid for a given situation and shot type."""
+    if heatmap_data is None:
+        return jsonify({'error': f'Heatmap data file not found at {heatmap_data_path}'}), 500
+        
+    try:
+        situation = request.args.get('situation') # Returns None if not present
+        shot_type = request.args.get('shot_type') # Returns None if not present
+        max_length = request.args.get('max_length', type=float)
+        max_width = request.args.get('max_width', type=float)
+
+        # Custom validation, as 'Penalty' is not allowed and error message should reflect that.
+        valid_situations = ['OpenPlay', 'SetPiece', 'DirectFreekick', 'FromCorner']
+        if situation is not None and situation not in valid_situations:
+            if situation == 'Penalty':
+                 return jsonify({'error': "The 'Penalty' situation is not available for grid prediction."}), 400
+            return jsonify({'error': f"Invalid situation. Valid values are: {', '.join(valid_situations)}"}), 400
+
+        if not verify_valid_shot_type(shot_type):
+            return jsonify({'error': 'Invalid shot type - Valid values are: Head, RightFoot, LeftFoot, OtherBodyPart'}), 400
+
+        # Convert None to 'None' string for dict key access, matching heatmaps.json
+        situation_key = situation if situation is not None else 'None'
+        shot_type_key = shot_type if shot_type is not None else 'None'
+
+        # Retrieve data, creating a copy of grid_def to avoid modifying the global object
+        grid_definition = heatmap_data['grid_definition'].copy()
+        heatmap = heatmap_data['heatmaps'][situation_key][shot_type_key]
+
+        # Scale coordinates if dimensions are provided
+        if max_length is not None and max_width is not None:
+            if max_length <= 0 or max_width <= 0:
+                return jsonify({'error': 'max_length and max_width must be positive numbers.'}), 400
+            
+            grid_definition['x_coords'] = [x * max_length for x in grid_definition['x_coords']]
+            grid_definition['y_coords'] = [y * max_width for y in grid_definition['y_coords']]
+        
+        return jsonify({
+            'grid_definition': grid_definition,
+            'heatmap': heatmap
+        }), 200
+
+    except KeyError:
+        return jsonify({'error': 'Data not found for the specified situation and shot_type combination.'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)
