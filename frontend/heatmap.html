@@ -114,12 +114,15 @@
         .legend-gradient {
             width: 200px;
             height: 20px;
-            background: linear-gradient(to right, 
-                rgba(0, 0, 255, 0.1), 
-                rgba(0, 255, 0, 0.3), 
-                rgba(255, 255, 0, 0.5), 
-                rgba(255, 165, 0, 0.7), 
-                rgba(255, 0, 0, 0.9));
+            background: linear-gradient(to right,
+                rgba(255, 255, 255, 0.0) 0%,
+                rgba(220, 230, 255, 0.196) 1%,
+                rgba(100, 149, 237, 0.392) 10%,
+                rgba(0, 128, 0, 0.588) 30%,
+                rgba(255, 255, 0, 0.784) 50%,
+                rgba(255, 140, 0, 0.863) 70%,
+                rgba(255, 0, 0, 1.0) 100%
+            );
             border-radius: 3px;
             border: 1px solid #ccc;
         }
@@ -239,50 +242,49 @@
         const LINE_COLOR = '#000080';
 
         // Color mapping for xG values - returns RGBA object
+        const colorStops = [
+            { value: 0.0, color: { r: 255, g: 255, b: 255, a: 0 } }, // Pure white, fully transparent
+            { value: 0.01, color: { r: 220, g: 230, b: 255, a: 50 } }, // Very light blue, low alpha (approx 0.2)
+            { value: 0.1, color: { r: 100, g: 149, b: 237, a: 100 } }, // CornflowerBlue, medium alpha (approx 0.4)
+            { value: 0.3, color: { r: 0, g: 128, b: 0, a: 150 } },   // Green, higher alpha (approx 0.6)
+            { value: 0.5, color: { r: 255, g: 255, b: 0, a: 200 } }, // Yellow, even higher alpha (approx 0.8)
+            { value: 0.7, color: { r: 255, g: 140, b: 0, a: 220 } }, // DarkOrange, high alpha (approx 0.9)
+            { value: 1.0, color: { r: 255, g: 0, b: 0, a: 255 } }    // Red, full alpha (1.0)
+        ];
+
         function getHeatmapColorRGBA(xgValue) {
-            if (xgValue === 0) return { r: 0, g: 0, b: 0, a: 0 };
-            
-            // Normalize xG value (0-1) to color intensity
-            const intensity = Math.min(xgValue, 1);
-            
-            // Create color gradient: blue -> green -> yellow -> orange -> red
-            let r, g, b;
-            
-            if (intensity <= 0.2) {
-                // Blue to green
-                const t = intensity / 0.2;
-                r = 0;
-                g = Math.floor(255 * t);
-                b = Math.floor(255 * (1 - t));
-            } else if (intensity <= 0.4) {
-                // Green to yellow
-                const t = (intensity - 0.2) / 0.2;
-                r = Math.floor(255 * t);
-                g = 255;
-                b = 0;
-            } else if (intensity <= 0.6) {
-                // Yellow to orange
-                const t = (intensity - 0.4) / 0.2;
-                r = 255;
-                g = Math.floor(255 * (1 - t * 0.35));
-                b = 0;
-            } else if (intensity <= 0.8) {
-                // Orange to red
-                const t = (intensity - 0.6) / 0.2;
-                r = 255;
-                g = Math.floor(165 * (1 - t));
-                b = 0;
-            } else {
-                // Red (high intensity)
-                r = 255;
-                g = 0;
-                b = 0;
+            const intensity = Math.min(Math.max(xgValue, 0), 1); // Ensure value is between 0 and 1
+
+            if (intensity === 0) {
+                return colorStops[0].color; // Return the transparent white for 0.0
             }
-            
-            // Adjust alpha based on intensity
-            const alpha = Math.floor(Math.max(25, intensity * 230)); // 25-230 range for better visibility
-            
-            return { r, g, b, a: alpha };
+
+            // Find the two color stops to interpolate between
+            let lowerStop = colorStops[0];
+            let upperStop = colorStops[colorStops.length - 1];
+
+            for (let i = 0; i < colorStops.length - 1; i++) {
+                if (intensity >= colorStops[i].value && intensity <= colorStops[i+1].value) {
+                    lowerStop = colorStops[i];
+                    upperStop = colorStops[i+1];
+                    break;
+                }
+            }
+
+            // Calculate interpolation factor (t)
+            const range = upperStop.value - lowerStop.value;
+            let t = 0;
+            if (range > 0) {
+                t = (intensity - lowerStop.value) / range;
+            }
+
+            // Interpolate R, G, B, A components
+            const r = Math.round(lowerStop.color.r + t * (upperStop.color.r - lowerStop.color.r));
+            const g = Math.round(lowerStop.color.g + t * (upperStop.color.g - lowerStop.color.g));
+            const b = Math.round(lowerStop.color.b + t * (upperStop.color.b - lowerStop.color.b));
+            const a = Math.round(lowerStop.color.a + t * (upperStop.color.a - lowerStop.color.a));
+
+            return { r, g, b, a };
         }
 
         // Color mapping for xG values - returns CSS color string (kept for legend)
