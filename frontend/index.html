@@ -241,6 +241,7 @@
                 // If clicked more than a meter away from the penalty spot, reset situation
                 if (distance > 1) {
                     situationSelect.value = ''; // Reset to "All Situations"
+                    shotTypeSelect.disabled = false; // Re-enable shot type dropdown
                 }
             }
             
@@ -304,9 +305,14 @@
                 coordsText.textContent = `Coordinates: X: ${plottedPoint.x.toFixed(1)}m, Y: ${plottedPoint.y.toFixed(1)}m (Penalty Spot)`;
                 drawPitch();
                 callXGPrediction(plottedPoint.x, plottedPoint.y);
+                // Disable shot type dropdown and reset its value
+                shotTypeSelect.disabled = true;
+                shotTypeSelect.value = ''; // "All Shot Types"
             } else {
                 // For other situations, just update the xG if a point is already plotted
                 updateXGPrediction();
+                // Enable shot type dropdown
+                shotTypeSelect.disabled = false;
             }
         }
 
@@ -326,7 +332,13 @@
         shotTypeSelect.addEventListener('change', updateXGPrediction);
 
         // Initial setup on page load
-        document.addEventListener('DOMContentLoaded', setupCanvas);
+        document.addEventListener('DOMContentLoaded', () => {
+            setupCanvas();
+            // Reset dropdowns and enable shot type on page load
+            situationSelect.value = ''; // "All Situations"
+            shotTypeSelect.value = ''; // "All Shot Types"
+            shotTypeSelect.disabled = false;
+        });
     </script>
 </body>
 </html>
