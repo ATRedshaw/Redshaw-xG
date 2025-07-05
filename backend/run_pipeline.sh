@@ -48,4 +48,12 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# Run heatmap generation
+echo "\n=== Generating Heatmap Endpoint Data ==="
+python -m src.modelling.generate_heatmaps
+if [ $? -ne 0 ]; then
+    echo "Error: Heatmap generation failed"
+    exit 1
+fi
+
 echo "\n=== Pipeline completed successfully ==="
