@@ -62,7 +62,7 @@ def _generate_heatmap_for_combo(
             
             # Predict the probability and store it, rounded for precision.
             prediction = models[chosen_model].predict_proba(X)[:, 1][0]
-            xg_grid[i, j] = round(prediction, 4)
+            xg_grid[i, j] = round(prediction, 2)
 
     # Convert the final NumPy grid to a standard Python list for JSON serialization.
     return xg_grid.tolist()
