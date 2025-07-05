@@ -1,12 +1,11 @@
 {
     "model_name": "shottype_model",
-    "brier_score": 0.07871573652292647,
+    "model_type": "Logistic Regression",
+    "brier_score": 0.0824461905408043,
     "best_parameters": {
-        "max_depth": 10,
-        "max_features": "log2",
-        "min_samples_leaf": 1,
-        "min_samples_split": 18,
-        "n_estimators": 295
+        "logreg__C": 0.005039387655561005,
+        "logreg__penalty": "l1",
+        "logreg__solver": "liblinear"
     },
     "features": [
         "X",
@@ -19,5 +18,6 @@
         "shotType_LeftFoot",
         "shotType_OtherBodyPart",
         "shotType_RightFoot"
-    ]
+    ],
+    "test_set_size": 41223
 }

@@ -1,12 +1,11 @@
 {
     "model_name": "situation_model",
-    "brier_score": 0.0794697587874261,
+    "model_type": "Logistic Regression",
+    "brier_score": 0.07985591921099297,
     "best_parameters": {
-        "max_depth": 10,
-        "max_features": "sqrt",
-        "min_samples_leaf": 1,
-        "min_samples_split": 18,
-        "n_estimators": 260
+        "logreg__C": 0.002171810808202343,
+        "logreg__penalty": "l2",
+        "logreg__solver": "saga"
     },
     "features": [
         "X",
@@ -20,5 +19,6 @@
         "situation_OpenPlay",
         "situation_Penalty",
         "situation_SetPiece"
-    ]
+    ],
+    "test_set_size": 41223
 }

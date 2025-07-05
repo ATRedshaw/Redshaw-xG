@@ -1,18 +1,21 @@
 import pandas as pd
 from pathlib import Path
-from sklearn.ensemble import RandomForestClassifier
-from skopt import BayesSearchCV
-from skopt.space import Integer, Categorical
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import StratifiedKFold, train_test_split, RandomizedSearchCV
+from scipy.stats import uniform, loguniform
 import joblib
 import json
 
 def train_and_save_model(model_name: str, features: list, data: pd.DataFrame, target_col: str, models_dir: Path):
     """
-    Trains a RandomForestClassifier, and saves the model, an input example,
-    and metadata to a dedicated local directory.
+    Trains a LogisticRegression model, and saves the model, an input example,
+    and metadata to a dedicated local directory. Uses StratifiedKFold for cross-validation
+    and performs a train-test split.
 
     Args:
-        model_name (str): A descriptive name for the model (e.g., 'basic_model'),
+        model_name (str): A descriptive name for the model (e.g., 'logistic_basic_model'),
                           which will also be the folder name.
         features (list): The list of feature column names to use for training.
         data (pd.DataFrame): The full dataframe containing features and the target.
@@ -26,26 +29,36 @@ def train_and_save_model(model_name: str, features: list, data: pd.DataFrame, ta
     model_output_dir.mkdir(parents=True, exist_ok=True)
     print(f"Artifacts will be saved to: {model_output_dir}")
 
-    # Data is prepared for training.
+    # Prepare data for training.
     X = data[features]
     y = data[target_col]
 
-    # Hyperparameter search space.
+    # Split data into training and testing sets, ensuring stratification.
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=104, stratify=y)
+    
+    # Create a pipeline to scale data and then apply logistic regression.
+    # Using class_weight='balanced' to handle class imbalance directly in the model.
+    pipeline = Pipeline([
+        ('scaler', StandardScaler()),
+        ('logreg', LogisticRegression(random_state=104, max_iter=1000)) 
+    ])
+
+    # Hyperparameter search space for Logistic Regression using distributions for RandomizedSearchCV.
     search_spaces = {
-        'n_estimators': Integer(100, 500),
-        'max_depth': Integer(10, 40),
-        'min_samples_split': Integer(2, 20),
-        'min_samples_leaf': Integer(1, 10),
-        'max_features': Categorical(['sqrt', 'log2'])
+        'logreg__penalty': ['l1', 'l2'],
+        'logreg__C': loguniform(1e-4, 1e+4), # Use loguniform for C
+        'logreg__solver': ['liblinear', 'saga']
     }
 
-    # BayesSearchCV is used for hyperparameter optimisation.
-    rf = RandomForestClassifier(random_state=104)
-    bayes_search = BayesSearchCV(
-        estimator=rf,
-        search_spaces=search_spaces,
-        n_iter=15,
-        cv=5,
+    # Use StratifiedKFold for cross-validation to maintain class proportions.
+    cv_strategy = StratifiedKFold(n_splits=5, shuffle=True, random_state=104)
+
+    # RandomizedSearchCV for hyperparameter optimization with stratified cross-validation.
+    random_search = RandomizedSearchCV(
+        estimator=pipeline,
+        param_distributions=search_spaces,
+        n_iter=50,
+        cv=cv_strategy,
         scoring='neg_brier_score',
         n_jobs=-1,
         random_state=104,
@@ -53,37 +66,38 @@ def train_and_save_model(model_name: str, features: list, data: pd.DataFrame, ta
         refit=True
     )
 
-    # Cross-validation is run and the model is fitted using the defined search.
-    print(f"Running BayesSearchCV for {model_name}...")
-    bayes_search.fit(X, y)
+    print(f"Running RandomizedSearchCV for {model_name}...")
+    random_search.fit(X_train, y_train) # Fit on training data
 
-    # The best estimator is trained on the full data because of `refit=True`.
-    best_model = bayes_search.best_estimator_
-    best_score = -bayes_search.best_score_
-    best_params = bayes_search.best_params_
-
+    best_model = random_search.best_estimator_
+    best_score = -random_search.best_score_ # Convert neg_brier_score back to brier_score
+    
+    best_params = random_search.best_params_
+    
     print(f"Best score (Brier Score) for {model_name}: {best_score:.4f} (lower is better)")
     print(f"Best parameters: {best_params}")
 
     # --- Save artifacts locally ---
 
-    # 1. Save the trained model using joblib.
+    # Save the trained model pipeline.
     model_path = model_output_dir / "model.joblib"
     joblib.dump(best_model, model_path)
     print(f"Saved trained model to {model_path}")
 
-    # 2. Save an example of the input data.
-    input_example = X.head()
+    # Save an example of the input data.
+    input_example = X_train.head()
     example_path = model_output_dir / "input_example.csv"
     input_example.to_csv(example_path, index=False)
     print(f"Saved input example to {example_path}")
     
-    # 3. Save metadata including parameters, score, and features.
+    # Save metadata.
     metadata = {
         "model_name": model_name,
+        "model_type": "Logistic Regression",
         "brier_score": best_score,
         "best_parameters": best_params,
-        "features": features
+        "features": features,
+        "test_set_size": len(X_test)
     }
     metadata_path = model_output_dir / "metadata.json"
     with open(metadata_path, 'w') as f:
@@ -97,7 +111,7 @@ def main():
     """
     Main function to orchestrate the loading of data and training of all models.
     """
-    # Project paths are defined.
+    # Define project paths.
     try:
         project_root = Path(__file__).parent.parent.parent
     except NameError:
@@ -106,10 +120,9 @@ def main():
     data_path = project_root / 'data' / 'preprocessed' / 'preprocessed_shots.csv'
     models_dir = project_root / 'models'
     
-    # Create the main models directory if it doesn't exist.
     models_dir.mkdir(exist_ok=True)
 
-    # The preprocessed data is loaded from the specified path.
+    # Load preprocessed data.
     print(f"Loading data from {data_path}...")
     try:
         df = pd.read_csv(data_path)
@@ -119,24 +132,21 @@ def main():
         return
     print("Data loaded successfully.")
 
-    # The target variable and all available features are defined.
+    # Define target and features.
     all_cols = df.columns.tolist()
     target_variable = 'target'
     
-    # The target variable is removed from the list of all columns to get all possible features.
     all_features = [col for col in all_cols if col != target_variable]
 
-    # A base set of features is defined.
     base_features = [
         'X', 'Y', 'distance_to_goal', 'angle_to_goal', 
         'zone_central', 'zone_wide'
     ]
     
-    # Features related to 'situation' and 'shotType' are identified.
     situation_features = [col for col in all_features if col.startswith('situation_')]
     shottype_features = [col for col in all_features if col.startswith('shotType_')]
     
-    # Configurations for each model to be trained, specifying their feature sets, are defined.
+    # Configure models to be trained.
     model_configs = {
         'basic_model': base_features,
         'situation_model': base_features + situation_features,
@@ -144,15 +154,14 @@ def main():
         'advanced_model': all_features
     }
 
-    # Each model configuration is iterated through to train and save the model.
+    # Iterate through model configurations to train and save.
     for name, features in model_configs.items():
-        # Verification occurs that all required features for the model exist in the dataframe.
+        # Verify all required features exist.
         missing_feats = [feat for feat in features if feat not in df.columns]
         if missing_feats:
             print(f"Warning: Missing columns for model '{name}': {missing_feats}. Skipping this model.")
             continue
         
-        # Call the training and saving function.
         train_and_save_model(name, features, df, target_variable, models_dir)
 
     print("--- All models have been trained and saved. ---")

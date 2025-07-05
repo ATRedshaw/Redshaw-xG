@@ -1,12 +1,11 @@
 {
     "model_name": "advanced_model",
-    "brier_score": 0.07818134939701146,
+    "model_type": "Logistic Regression",
+    "brier_score": 0.07841734572630568,
     "best_parameters": {
-        "max_depth": 11,
-        "max_features": "sqrt",
-        "min_samples_leaf": 6,
-        "min_samples_split": 2,
-        "n_estimators": 305
+        "logreg__C": 0.014272548556901481,
+        "logreg__penalty": "l1",
+        "logreg__solver": "saga"
     },
     "features": [
         "X",
@@ -40,5 +39,6 @@
         "interaction_SetPiece_LeftFoot",
         "interaction_SetPiece_OtherBodyPart",
         "interaction_SetPiece_RightFoot"
-    ]
+    ],
+    "test_set_size": 41223
 }
