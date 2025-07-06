@@ -272,8 +272,6 @@
                 normalisation: { is_normalised: false, max_pitch_width: 68, max_pitch_length: 105 }
             };
 
-            xgValue.textContent = '...'; // Indicate loading state
-
             try {
                 const response = await fetch('http://127.0.0.1:5000/api/predict', {
                     method: 'POST',
