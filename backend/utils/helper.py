@@ -77,7 +77,7 @@ def verify_valid_situation(situation):
     Returns:
         bool: True if the situation is valid, False otherwise.
     """
-    if situation is None:
+    if situation is None or situation == "":
         return True
     
     if situation in ['OpenPlay', 'SetPiece', 'DirectFreekick', 'FromCorner', 'Penalty']:
@@ -94,7 +94,7 @@ def verify_valid_shot_type(shot_type):
     Returns:
         bool: True if the shot type is valid, False otherwise.
     """
-    if shot_type is None:
+    if shot_type is None or shot_type == "":
         return True
     
     if shot_type in ['Head', 'RightFoot', 'LeftFoot', 'OtherBodyPart']:

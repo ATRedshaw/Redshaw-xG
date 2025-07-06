@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const homeTeamColorInput = document.getElementById('home-team-color');
     const awayTeamColorInput = document.getElementById('away-team-color');
     const saveMatchDetailsButton = document.getElementById('save-match-details');
+    const deleteMatchButton = document.getElementById('delete-match-button');
     const matchDetailsModal = document.getElementById('match-details-modal');
     const matchDetailsModalButton = document.getElementById('match-details-modal-button');
     const plotForHomeRadio = document.getElementById('plot-for-home');
@@ -196,6 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
             saveMatchDetails();
             closeModal();
         });
+        deleteMatchButton.addEventListener('click', deleteCurrentMatch);
         matchDetailsModalButton.addEventListener('click', openModal);
         loadMatchSelect.addEventListener('change', handleLoadMatch);
         homeTeamNameInput.addEventListener('input', () => updateTeamLabels());
@@ -436,6 +438,8 @@ document.addEventListener('DOMContentLoaded', () => {
         awayTeamNameInput.value = '';
         homeTeamColorInput.value = '#ff0000';
         awayTeamColorInput.value = '#0000ff';
+        situationSelect.value = ''; // Set to "All Situations"
+        shotTypeSelect.value = ''; // Set to "All Shot Types"
         updateTeamLabels();
         drawPitch();
         updateXgDisplay();
@@ -474,7 +478,9 @@ document.addEventListener('DOMContentLoaded', () => {
         currentMatch.shots.forEach((shot, index) => {
             const shotItem = document.createElement('li');
             shotItem.className = 'p-2 mb-1 rounded cursor-pointer hover:bg-slate-200';
-            shotItem.textContent = `Shot ${index + 1}: ${shot.xg.toFixed(2)} xG (${shot.shotType}, ${shot.situation})`;
+            const displayShotType = shot.shotType || 'N/A';
+            const displaySituation = shot.situation || 'N/A';
+            shotItem.textContent = `Shot ${index + 1}: ${shot.xg.toFixed(2)} xG (${displayShotType}, ${displaySituation})`;
             shotItem.dataset.shotIndex = index;
 
             if (selectedShot && selectedShot.index === index) {
@@ -559,7 +565,31 @@ document.addEventListener('DOMContentLoaded', () => {
         drawPitch();
         updateEditDeleteButtons();
     }
-
+ 
+    function updateDeleteMatchButton() {
+        deleteMatchButton.disabled = !currentMatch;
+    }
+ 
+    function deleteCurrentMatch() {
+        if (!currentMatch || !currentMatch.id) return;
+ 
+        if (!confirm(`Are you sure you want to delete the match "${currentMatch.name}"? This action cannot be undone.`)) {
+            return;
+        }
+ 
+        const transaction = db.transaction(['matches'], 'readwrite');
+        const objectStore = transaction.objectStore('matches');
+        const request = objectStore.delete(currentMatch.id);
+ 
+        request.onsuccess = () => {
+            alert('Match deleted successfully!');
+            resetToNewMatch();
+            loadMatchesIntoSelect();
+            closeModal();
+        };
+        request.onerror = (event) => console.error('Error deleting match:', event.target.errorCode);
+    }
+ 
     async function callXGPrediction(x, y, situation, shot_type) {
         const fetchBody = {
             x: x,
@@ -590,4 +620,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- INITIALIZATION ---
     initDB();
+
+    // Set default values for situation and shot type on initial load
+    situationSelect.value = '';
+    shotTypeSelect.value = '';
 });
