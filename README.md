@@ -14,7 +14,7 @@ This project is a web application that allows users to interactively explore a c
 
 ## Live Demo
 
-You can access the live version of the application here: [https://atredshaw.github.io/xg-plotter/frontend/index.html](https://atredshaw.github.io/xg-plotter/frontend/index.html)
+You can access the live version of the application here: [https://atredshaw.github.io/Redshaw-xG/index.html](https://atredshaw.github.io/Redshaw-xG/index.html)
 
 ## How It Works
 
