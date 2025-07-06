@@ -84,6 +84,13 @@ document.addEventListener('DOMContentLoaded', () => {
         '': 'N/A'
     };
 
+    function truncateText(text, maxLength) {
+        if (text.length > maxLength) {
+            return text.substring(0, maxLength) + '...';
+        }
+        return text;
+    }
+
     // --- DATABASE ---
     function initDB() {
         const request = indexedDB.open(dbName, dbVersion);
@@ -304,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateMatchTitleDisplay() {
         if (currentMatch) {
-            matchTitleDisplay.textContent = currentMatch.name;
+            matchTitleDisplay.textContent = truncateText(currentMatch.name, 35);
         } else {
             matchTitleDisplay.textContent = 'xG match plotter';
         }
@@ -493,7 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 matchElement.dataset.matchId = match.id;
 
                 const matchName = document.createElement('span');
-                matchName.textContent = match.name;
+                matchName.textContent = truncateText(match.name, 45);
                 matchName.className = 'font-medium text-slate-800';
                 matchElement.appendChild(matchName);
 
