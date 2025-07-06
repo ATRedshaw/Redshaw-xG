@@ -112,7 +112,7 @@
         let targetPoint = null; // Stores the target {x, y} in meters after a click
         let animationStartTime = null;
         const ANIMATION_DURATION_MS = 200; // milliseconds for animation for the dot
-        const POINT_RADIUS_PX = 6;
+        const POINT_RADIUS_METERS = 0.5; // Radius of the plotted point in meters
         const LINE_COLOR = '#000080'; // Navy Blue
         const POINT_COLOR = '#d32f2f'; // Red
         const PENALTY_SPOT_RIGHT_X = PITCH_LENGTH_METERS - PENALTY_SPOT_DISTANCE;
@@ -334,8 +334,9 @@
             if (currentPoint) {
                 ctx.fillStyle = POINT_COLOR;
                 const p = metersToPixels(currentPoint.x, currentPoint.y);
+                const radius_px = POINT_RADIUS_METERS * scale; // Scale the radius
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, POINT_RADIUS_PX, 0, 2 * Math.PI);
+                ctx.arc(p.x, p.y, radius_px, 0, 2 * Math.PI);
                 ctx.fill();
             }
         }
