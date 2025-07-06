@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shot Plotter</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/plotter.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 text-slate-800 antialiased">
+    <nav class="bg-white shadow-lg">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="index.html" class="text-2xl font-bold text-slate-900">Alex's xG Plotter</a>
+            <!-- Desktop Navigation -->
+            <div class="hidden md:flex space-x-6">
+                <a href="index.html" class="text-slate-700 hover:text-blue-600 font-medium transition-colors duration-200">Home</a>
+                <a href="heatmap.html" class="text-slate-700 hover:text-blue-600 font-medium transition-colors duration-200">Heatmaps</a>
+                <a href="plotter.html" class="text-slate-700 hover:text-blue-600 font-medium transition-colors duration-200">Plotter</a>
+            </div>
+            <!-- Mobile Menu Button -->
+            <div class="md:hidden">
+                <button id="mobile-menu-button" class="text-slate-700 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white shadow-inner">
+            <a href="index.html" class="block py-2 px-4 text-slate-700 hover:bg-slate-100">Home</a>
+            <a href="heatmap.html" class="block py-2 px-4 text-slate-700 hover:bg-slate-100">Heatmaps</a>
+            <a href="plotter.html" class="block py-2 px-4 text-slate-700 hover:bg-slate-100">Plotter</a>
+        </div>
+    </nav>
+
+    <!-- Main container for the entire application layout -->
+    <div class="container mx-auto p-4 lg:p-8">
+
+        <!-- Header -->
+        <header class="mb-6 text-center lg:text-left">
+            <h1 class="text-4xl font-bold text-slate-900">Shot Plotter</h1>
+            <p class="mt-1 text-lg text-slate-600">Plot shots for a match and see the xG value for each shot.</p>
+        </header>
+
+        <!-- Main Content Area: Flexbox for two-column layout on large screens -->
+        <main class="flex flex-col lg:flex-row lg:gap-8">
+
+            <!-- Left Column: Contains the pitch visualization and info display -->
+            <div class="lg:w-3/4 w-full">
+                <div id="pitch-container" class="w-full bg-white shadow-lg rounded-lg overflow-hidden relative">
+                    <canvas id="football-pitch" class="block w-full h-auto cursor-crosshair"></canvas>
+                </div>
+                <div class="mt-4 bg-white shadow-lg rounded-lg p-4">
+                    <div class="flex justify-around text-center">
+                        <div>
+                            <h3 id="home-team-xg-label" class="text-lg font-bold text-slate-900">Home Team xG</h3>
+                            <p id="home-team-xg" class="text-2xl font-bold text-blue-600">0.00</p>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-900">Selected Shot xG</h3>
+                            <p id="selected-shot-xg" class="text-2xl font-bold text-slate-800">-</p>
+                            <div class="mt-2">
+                                <button id="edit-shot-button" class="px-3 py-1 bg-yellow-500 text-white text-sm font-medium rounded-md shadow-sm hover:bg-yellow-600 disabled:bg-slate-400" disabled>Edit</button>
+                                <button id="delete-shot-button" class="px-3 py-1 bg-red-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-red-700 disabled:bg-slate-400" disabled>Delete</button>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 id="away-team-xg-label" class="text-lg font-bold text-slate-900">Away Team xG</h3>
+                            <p id="away-team-xg" class="text-2xl font-bold text-blue-600">0.00</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 grid grid-cols-2 gap-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-900 mb-2" id="home-shot-list-header">Home Shots</h3>
+                        <ul id="home-shot-list" class="bg-white shadow-lg rounded-lg p-2">
+                            <!-- Shot items will be added here -->
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-900 mb-2" id="away-shot-list-header">Away Shots</h3>
+                        <ul id="away-shot-list" class="bg-white shadow-lg rounded-lg p-2">
+                            <!-- Shot items will be added here -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Contains user controls -->
+            <aside class="lg:w-1/4 w-full mt-6 lg:mt-0">
+                <div class="bg-white p-6 rounded-lg shadow-lg sticky top-8">
+                    <button id="match-details-modal-button" class="w-full py-2.5 px-4 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors mb-4">Match Details</button>
+                    <h2 class="text-2xl font-bold text-slate-800 border-b border-slate-200 pb-3 my-4">Plotting Controls</h2>
+                    <div class="mb-4">
+                        <span class="block text-sm font-medium text-slate-600 mb-2">Plot for:</span>
+                        <div class="flex items-center space-x-4">
+                            <div class="flex items-center">
+                                <input type="radio" id="plot-for-home" name="team-select" value="home" class="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500" checked>
+                                <label for="plot-for-home" id="plot-for-home-label" class="ml-2 block text-sm font-medium text-slate-700">Home Team</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="radio" id="plot-for-away" name="team-select" value="away" class="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500">
+                                <label for="plot-for-away" id="plot-for-away-label" class="ml-2 block text-sm font-medium text-slate-700">Away Team</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="situation-select" class="block text-sm font-medium text-slate-600 mb-1">Situation</label>
+                        <select id="situation-select" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                            <option value="OpenPlay">Open Play</option>
+                            <option value="SetPiece">Set Piece</option>
+                            <option value="DirectFreekick">Direct Free Kick</option>
+                            <option value="FromCorner">From Corner</option>
+                            <option value="Penalty">Penalty</option>
+                        </select>
+                    </div>
+                    <div class="mb-6">
+                        <label for="shot-type-select" class="block text-sm font-medium text-slate-600 mb-1">Shot Type</label>
+                        <select id="shot-type-select" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                            <option value="Head">Head</option>
+                            <option value="RightFoot">Right Foot</option>
+                            <option value="LeftFoot">Left Foot</option>
+                            <option value="OtherBodyPart">Other Body Part</option>
+                        </select>
+                    </div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <script src="js/plotter.js"></script>
+    <script src="js/navbar.js"></script>
+
+    <!-- Edit Shot Modal -->
+    <div id="edit-shot-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Edit Shot</h3>
+                <div class="mt-2 px-7 py-3">
+                    <div class="mb-4">
+                        <label for="edit-situation-select" class="block text-sm font-medium text-slate-600 mb-1 text-left">Situation</label>
+                        <select id="edit-situation-select" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                            <option value="OpenPlay">Open Play</option>
+                            <option value="SetPiece">Set Piece</option>
+                            <option value="DirectFreekick">Direct Free Kick</option>
+                            <option value="FromCorner">From Corner</option>
+                            <option value="Penalty">Penalty</option>
+                        </select>
+                    </div>
+                    <div class="mb-6">
+                        <label for="edit-shot-type-select" class="block text-sm font-medium text-slate-600 mb-1 text-left">Shot Type</label>
+                        <select id="edit-shot-type-select" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                            <option value="Head">Head</option>
+                            <option value="RightFoot">Right Foot</option>
+                            <option value="LeftFoot">Left Foot</option>
+                            <option value="OtherBodyPart">Other Body Part</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button id="save-shot-changes-button" class="px-4 py-2 bg-blue-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Match Details Modal -->
+    <div id="match-details-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Match Details</h3>
+                <div class="mt-2 px-7 py-3">
+                    <div class="mb-4">
+                        <label for="load-match" class="block text-sm font-medium text-slate-600 mb-1 text-left">Load Match</label>
+                        <select id="load-match" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                            <option value="">New Match</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label for="match-name" class="block text-sm font-medium text-slate-600 mb-1 text-left">Match Name</label>
+                        <input type="text" id="match-name" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g. Team A vs Team B">
+                    </div>
+                    <div class="mb-4">
+                        <label for="home-team-name" class="block text-sm font-medium text-slate-600 mb-1 text-left">Home Team</label>
+                        <input type="text" id="home-team-name" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g. Team A">
+                    </div>
+                    <div class="mb-4">
+                        <label for="away-team-name" class="block text-sm font-medium text-slate-600 mb-1 text-left">Away Team</label>
+                        <input type="text" id="away-team-name" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g. Team B">
+                    </div>
+                    <div class="mb-4">
+                        <label for="home-team-color" class="block text-sm font-medium text-slate-600 mb-1 text-left">Home Team Colour</label>
+                        <input type="color" id="home-team-color" class="w-full p-1 h-10 border border-slate-300 rounded-md shadow-sm" value="#ff0000">
+                    </div>
+                    <div class="mb-4">
+                        <label for="away-team-color" class="block text-sm font-medium text-slate-600 mb-1 text-left">Away Team Colour</label>
+                        <input type="color" id="away-team-color" class="w-full p-1 h-10 border border-slate-300 rounded-md shadow-sm" value="#0000ff">
+                    </div>
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button id="save-match-details" class="px-4 py-2 bg-blue-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        Save and Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
