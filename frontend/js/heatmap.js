@@ -1,7 +1,5 @@
 // =================================================================================
 // SCRIPT START: HEATMAP VISUALIZATION LOGIC
-// The core functionality of this script is preserved from the original version.
-// It has been slightly reorganized for better readability and maintainability.
 // =================================================================================
 
 // --- DOM Element Selection ---
@@ -292,7 +290,6 @@ async function loadHeatmapData() {
     const situation = situationSelect.value || null;
     const shotType = shotTypeSelect.value || null;
     
-    showStatus('Loading heatmap data...', 'loading');
     loadButton.disabled = true;
 
     try {
@@ -312,8 +309,6 @@ async function loadHeatmapData() {
         heatmapData = await response.json();
         
         drawComplete();
-        showStatus('Heatmap loaded successfully!', 'success');
-        setTimeout(hideStatus, 3000);
         
     } catch (error) {
         console.error('Error loading heatmap:', error);
