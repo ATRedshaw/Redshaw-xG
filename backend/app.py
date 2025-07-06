@@ -142,4 +142,5 @@ def predict_grid():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Run in production
+    app.run(debug=False)
