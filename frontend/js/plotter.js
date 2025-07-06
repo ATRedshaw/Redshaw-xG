@@ -65,6 +65,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const POINT_RADIUS_METERS = 0.5;
     const LINE_COLOR = '#000080';
 
+    const situationMap = {
+        'OpenPlay': 'Open Play',
+        'FromCorner': 'From Corner',
+        'DirectFreekick': 'Direct Freekick',
+        'Penalty': 'Penalty',
+        '': 'N/A'
+    };
+
+    const shotTypeMap = {
+        'Header': 'Header',
+        'LeftFoot': 'Left Foot',
+        'RightFoot': 'Right Foot',
+        'Other': 'Other',
+        '': 'N/A'
+    };
+
     // --- DATABASE ---
     function initDB() {
         const request = indexedDB.open(dbName, dbVersion);
@@ -539,8 +555,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentMatch.shots.forEach((shot, index) => {
             const shotItem = document.createElement('li');
             shotItem.className = 'p-2 mb-1 rounded cursor-pointer hover:bg-slate-200';
-            const displayShotType = shot.shotType || 'N/A';
-            const displaySituation = shot.situation || 'N/A';
+            const displayShotType = shotTypeMap[shot.shotType] || shot.shotType;
+            const displaySituation = situationMap[shot.situation] || shot.situation;
             shotItem.textContent = `Shot ${index + 1}: ${shot.xg.toFixed(2)} xG (${displayShotType}, ${displaySituation})`;
             shotItem.dataset.shotIndex = index;
 
