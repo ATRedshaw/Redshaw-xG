@@ -219,10 +219,6 @@ document.addEventListener('DOMContentLoaded', () => {
         closeLoadMatchModalButton.addEventListener('click', closeLoadMatchModal);
         searchMatchInput.addEventListener('input', loadMatchesIntoModal);
 
-        homeTeamNameInput.addEventListener('input', () => updateTeamLabels());
-        awayTeamNameInput.addEventListener('input', () => updateTeamLabels());
-        matchDateInput.addEventListener('input', () => updateTeamLabels());
-
         // Close modal if clicking outside of it
         window.addEventListener('click', (event) => {
             if (event.target === createMatchModal) {
@@ -294,20 +290,21 @@ document.addEventListener('DOMContentLoaded', () => {
         editShotModal.classList.add('hidden');
     }
 
-    function updateTeamLabels() {
-        const homeName = homeTeamNameInput.value || 'Home Team';
-        const awayName = awayTeamNameInput.value || 'Away Team';
-        const matchDate = matchDateInput.value;
+    function updateTeamLabels(homeName, awayName) {
+        const homeDisplayName = homeName || 'Home Team';
+        const awayDisplayName = awayName || 'Away Team';
 
-        homeTeamLabel.textContent = homeName;
-        awayTeamLabel.textContent = awayName;
-        homeTeamXgLabel.textContent = `${homeName} xG`;
-        awayTeamXgLabel.textContent = `${awayName} xG`;
-        homeShotListHeader.textContent = `${homeName} Shots`;
-        awayShotListHeader.textContent = `${awayName} Shots`;
+        homeTeamLabel.textContent = homeDisplayName;
+        awayTeamLabel.textContent = awayDisplayName;
+        homeTeamXgLabel.textContent = `${homeDisplayName} xG`;
+        awayTeamXgLabel.textContent = `${awayDisplayName} xG`;
+        homeShotListHeader.textContent = `${homeDisplayName} Shots`;
+        awayShotListHeader.textContent = `${awayDisplayName} Shots`;
+    }
 
-        if (homeTeamNameInput.value && awayTeamNameInput.value && matchDate) {
-            matchTitleDisplay.textContent = `${homeTeamNameInput.value} vs ${awayTeamNameInput.value} - ${matchDate}`;
+    function updateMatchTitleDisplay() {
+        if (currentMatch) {
+            matchTitleDisplay.textContent = currentMatch.name;
         } else {
             matchTitleDisplay.textContent = 'xG match plotter';
         }
@@ -440,9 +437,10 @@ document.addEventListener('DOMContentLoaded', () => {
         request.onsuccess = (event) => {
             match.id = event.target.result;
             currentMatch = match;
-            alert('Match saved!');
+            alert('Match created!');
             loadMatchesIntoModal();
-            updateTeamLabels();
+            updateTeamLabels(match.homeTeam, match.awayTeam);
+            updateMatchTitleDisplay();
             drawPitch();
             updateXgDisplay();
             updateShotLists();
@@ -531,7 +529,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 awayTeamNameInput.value = currentMatch.awayTeam;
                 homeTeamColorInput.value = currentMatch.homeColor;
                 awayTeamColorInput.value = currentMatch.awayColor;
-                updateTeamLabels();
+                updateTeamLabels(currentMatch.homeTeam, currentMatch.awayTeam);
+                updateMatchTitleDisplay();
                 drawPitch();
                 updateXgDisplay();
                 updateShotLists();
@@ -550,7 +549,8 @@ document.addEventListener('DOMContentLoaded', () => {
         awayTeamColorInput.value = '#0000ff';
         situationSelect.value = ''; // Set to "All Situations"
         shotTypeSelect.value = ''; // Set to "All Shot Types"
-        updateTeamLabels();
+        updateTeamLabels('Home Team', 'Away Team');
+        updateMatchTitleDisplay();
         drawPitch();
         updateXgDisplay();
         updateShotLists();
@@ -748,5 +748,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set default values for situation and shot type on initial load
     situationSelect.value = '';
     shotTypeSelect.value = '';
-    updateTeamLabels(); // Set initial match title
+    updateTeamLabels('Home Team', 'Away Team');
+    updateMatchTitleDisplay();
 });
