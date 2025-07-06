@@ -4,9 +4,9 @@ from utils.helper import load_models, load_metadata_features, determine_model, v
 from utils.preprocess import preprocess
 import json
 
-# Add CORS, and load models and features
+# Add CORS, and load models and features. Only allow requests from https://atredshaw.github.io/{any subpath}
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "https://atredshaw.github.io"}})
 models = load_models()
 features = load_metadata_features()
 
