@@ -300,7 +300,7 @@ async function loadHeatmapData() {
         params.append('max_width', PITCH_WIDTH_METERS.toString());
 
         // IMPORTANT: Replace with your actual backend API endpoint
-        const response = await fetch(`http://127.0.0.1:5000/api/predict/grid?${params}`);
+        const response = await fetch(`https://redshaw-xg.onrender.com/api/predict/grid?${params}`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);
