@@ -52,7 +52,10 @@
             <div id="pitch-wrapper" class="lg:col-span-3">
                 <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
                     <h2 id="match-title" class="text-2xl font-bold text-slate-900 mb-2 sm:mb-0">xG match plotter</h2>
-                    <button id="match-details-modal-button" class="py-2.5 px-4 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors w-full sm:w-auto">Match Details</button>
+                    <div class="flex space-x-2">
+                        <button id="create-match-modal-button" class="py-2.5 px-4 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors w-full sm:w-auto">Create New Match</button>
+                        <button id="load-match-modal-button" class="py-2.5 px-4 bg-gray-600 text-white font-semibold rounded-md shadow-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors w-full sm:w-auto">Load Match</button>
+                    </div>
                 </div>
                 <div id="pitch-container" class="w-full bg-white shadow-lg rounded-lg overflow-hidden relative">
                     <canvas id="football-pitch" class="block w-full h-auto cursor-crosshair"></canvas>
@@ -180,18 +183,12 @@
         </div>
     </div>
 
-    <!-- Match Details Modal -->
-    <div id="match-details-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+    <!-- Create Match Modal -->
+    <div id="create-match-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
             <div class="mt-3 text-center">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">Match Details</h3>
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Create New Match</h3>
                 <div class="mt-2 px-7 py-3">
-                    <div class="mb-4">
-                        <label for="load-match" class="block text-sm font-medium text-slate-600 mb-1 text-left">Load Match</label>
-                        <select id="load-match" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                            <option value="">New Match</option>
-                        </select>
-                    </div>
                     <div class="mb-4">
                         <label for="match-date" class="block text-sm font-medium text-slate-600 mb-1 text-left">Match Date</label>
                         <input type="date" id="match-date" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
@@ -214,11 +211,28 @@
                     </div>
                 </div>
                 <div class="items-center px-4 py-3">
-                    <button id="save-match-details" class="px-4 py-2 bg-blue-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2">
-                        Save and Close
+                    <button id="save-new-match-button" class="px-4 py-2 bg-blue-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        Save Match
                     </button>
-                    <button id="delete-match-button" class="px-4 py-2 bg-red-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
-                        Delete Current Match
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Match Modal -->
+    <div id="load-match-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border w-[500px] shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 text-center">Load Match</h3>
+                <div class="mt-4 px-4 py-3">
+                    <input type="text" id="search-match-input" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Search matches...">
+                </div>
+                <div id="match-list-container" class="mt-4 px-4 py-3 max-h-96 overflow-y-auto">
+                    <!-- Match list will be populated here -->
+                </div>
+                 <div class="items-center px-4 py-3">
+                    <button id="close-load-match-modal-button" class="px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400">
+                        Close
                     </button>
                 </div>
             </div>

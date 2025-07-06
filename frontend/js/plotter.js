@@ -3,16 +3,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('football-pitch');
     const ctx = canvas.getContext('2d');
     const pitchContainer = document.getElementById('pitch-container');
-    const loadMatchSelect = document.getElementById('load-match');
     const matchDateInput = document.getElementById('match-date');
     const homeTeamNameInput = document.getElementById('home-team-name');
     const awayTeamNameInput = document.getElementById('away-team-name');
     const homeTeamColorInput = document.getElementById('home-team-color');
     const awayTeamColorInput = document.getElementById('away-team-color');
-    const saveMatchDetailsButton = document.getElementById('save-match-details');
-    const deleteMatchButton = document.getElementById('delete-match-button');
-    const matchDetailsModal = document.getElementById('match-details-modal');
-    const matchDetailsModalButton = document.getElementById('match-details-modal-button');
+    const createMatchModalButton = document.getElementById('create-match-modal-button');
+    const loadMatchModalButton = document.getElementById('load-match-modal-button');
+    const createMatchModal = document.getElementById('create-match-modal');
+    const loadMatchModal = document.getElementById('load-match-modal');
+    const saveNewMatchButton = document.getElementById('save-new-match-button');
+    const searchMatchInput = document.getElementById('search-match-input');
+    const matchListContainer = document.getElementById('match-list-container');
+    const closeLoadMatchModalButton = document.getElementById('close-load-match-modal-button');
     const matchTitleDisplay = document.getElementById('match-title');
     const plotForHomeRadio = document.getElementById('plot-for-home');
     const plotForAwayRadio = document.getElementById('plot-for-away');
@@ -90,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
         request.onsuccess = (event) => {
             db = event.target.result;
             console.log('Database initialised');
-            loadMatchesIntoSelect();
+            loadMatchesIntoModal();
             setupEventListeners();
             setupCanvas();
         };
@@ -210,18 +213,23 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupEventListeners() {
         window.addEventListener('resize', setupCanvas);
         canvas.addEventListener('click', handleCanvasClick);
-        saveMatchDetailsButton.addEventListener('click', saveMatchDetails);
-        deleteMatchButton.addEventListener('click', deleteCurrentMatch);
-        loadMatchSelect.addEventListener('change', handleLoadMatch);
+        saveNewMatchButton.addEventListener('click', saveNewMatch);
+        createMatchModalButton.addEventListener('click', openCreateMatchModal);
+        loadMatchModalButton.addEventListener('click', openLoadMatchModal);
+        closeLoadMatchModalButton.addEventListener('click', closeLoadMatchModal);
+        searchMatchInput.addEventListener('input', loadMatchesIntoModal);
+
         homeTeamNameInput.addEventListener('input', () => updateTeamLabels());
         awayTeamNameInput.addEventListener('input', () => updateTeamLabels());
         matchDateInput.addEventListener('input', () => updateTeamLabels());
-        matchDetailsModalButton.addEventListener('click', openModal);
 
         // Close modal if clicking outside of it
         window.addEventListener('click', (event) => {
-            if (event.target === matchDetailsModal) {
-                closeModal();
+            if (event.target === createMatchModal) {
+                closeCreateMatchModal();
+            }
+            if (event.target === loadMatchModal) {
+                closeLoadMatchModal();
             }
             if (event.target === editShotModal) {
                 closeEditShotModal();
@@ -251,13 +259,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function openModal() {
-        matchDetailsModal.classList.remove('hidden');
-        updateDeleteMatchButton();
+    function openCreateMatchModal() {
+        createMatchModal.classList.remove('hidden');
     }
 
-    function closeModal() {
-        matchDetailsModal.classList.add('hidden');
+    function closeCreateMatchModal() {
+        createMatchModal.classList.add('hidden');
+    }
+
+    function openLoadMatchModal() {
+        loadMatchModal.classList.remove('hidden');
+        loadMatchesIntoModal();
+    }
+
+    function closeLoadMatchModal() {
+        loadMatchModal.classList.add('hidden');
     }
 
     function openEditShotModal() {
@@ -299,7 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function handleCanvasClick(event) {
         if (!currentMatch) {
-            alert('Please save match details before plotting shots.');
+            alert('Please create or load a match before plotting shots.');
             return;
         }
 
@@ -388,7 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function saveMatchDetails() {
+    function saveNewMatch() {
         const homeTeamName = homeTeamNameInput.value;
         const awayTeamName = awayTeamNameInput.value;
         const matchDate = matchDateInput.value;
@@ -402,32 +418,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const matchTitle = `${homeTeamName} vs ${awayTeamName} - ${matchDate}`;
 
-        if (currentMatch) {
-            // Update existing match
-            currentMatch.name = matchTitle;
-            currentMatch.date = matchDate;
-            currentMatch.homeTeam = homeTeamName;
-            currentMatch.awayTeam = awayTeamName;
-            currentMatch.homeColor = homeTeamColor;
-            currentMatch.awayColor = awayTeamColor;
-            updateMatchInDB();
-            updateTeamLabels();
-            closeModal();
-        } else {
-            // Create new match
-            currentMatch = {
-                name: matchTitle,
-                date: matchDate,
-                homeTeam: homeTeamName,
-                awayTeam: awayTeamName,
-                homeColor: homeTeamColor,
-                awayColor: awayTeamColor,
-                homeAttacking: 'right', // Default
-                awayAttacking: 'left', // Default
-                shots: []
-            };
-            addMatchToDB(currentMatch);
-        }
+        const newMatch = {
+            name: matchTitle,
+            date: matchDate,
+            homeTeam: homeTeamName,
+            awayTeam: awayTeamName,
+            homeColor: homeTeamColor,
+            awayColor: awayTeamColor,
+            homeAttacking: 'right', // Default
+            awayAttacking: 'left', // Default
+            shots: []
+        };
+        addMatchToDB(newMatch);
     }
 
     function addMatchToDB(match) {
@@ -436,11 +438,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const request = objectStore.add(match);
 
         request.onsuccess = (event) => {
-            currentMatch.id = event.target.result;
+            match.id = event.target.result;
+            currentMatch = match;
             alert('Match saved!');
-            loadMatchesIntoSelect();
+            loadMatchesIntoModal();
             updateTeamLabels();
-            closeModal();
+            drawPitch();
+            updateXgDisplay();
+            updateShotLists();
+            closeCreateMatchModal();
+
+            // Clear the create form
+            matchDateInput.value = '';
+            homeTeamNameInput.value = '';
+            awayTeamNameInput.value = '';
+            homeTeamColorInput.value = '#ff0000';
+            awayTeamColorInput.value = '#0000ff';
         };
         request.onerror = (event) => console.error('Error saving match:', event.target.errorCode);
     }
@@ -459,33 +472,53 @@ document.addEventListener('DOMContentLoaded', () => {
         request.onerror = (event) => console.error('Error updating match:', event.target.errorCode);
     }
 
-    function loadMatchesIntoSelect() {
+    function loadMatchesIntoModal() {
         const transaction = db.transaction(['matches'], 'readonly');
         const objectStore = transaction.objectStore('matches');
         const request = objectStore.getAll();
 
         request.onsuccess = () => {
             const matches = request.result;
-            loadMatchSelect.innerHTML = '<option value="">New Match</option>';
-            matches.forEach(match => {
-                const option = document.createElement('option');
-                option.value = match.id;
-                option.textContent = match.name;
-                if (currentMatch && currentMatch.id === match.id) {
-                    option.selected = true;
-                }
-                loadMatchSelect.appendChild(option);
+            const searchTerm = searchMatchInput.value.toLowerCase();
+            matchListContainer.innerHTML = '';
+
+            const filteredMatches = matches.filter(match => match.name.toLowerCase().includes(searchTerm));
+
+            if (filteredMatches.length === 0) {
+                matchListContainer.innerHTML = '<p class="text-center text-slate-500">No matches found.</p>';
+                return;
+            }
+
+            filteredMatches.forEach(match => {
+                const matchElement = document.createElement('div');
+                matchElement.className = 'flex items-center justify-between p-3 mb-2 rounded-lg cursor-pointer hover:bg-slate-100';
+                matchElement.dataset.matchId = match.id;
+
+                const matchName = document.createElement('span');
+                matchName.textContent = match.name;
+                matchName.className = 'font-medium text-slate-800';
+                matchElement.appendChild(matchName);
+
+                const deleteIcon = document.createElement('span');
+                deleteIcon.innerHTML = '&#128465;'; // Bin icon
+                deleteIcon.className = 'text-red-500 hover:text-red-700 cursor-pointer';
+                deleteIcon.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteMatchFromModal(match.id, match.name);
+                });
+
+                matchElement.appendChild(deleteIcon);
+
+                matchElement.addEventListener('click', () => {
+                    handleLoadMatch(match.id);
+                });
+
+                matchListContainer.appendChild(matchElement);
             });
         };
     }
 
-    function handleLoadMatch() {
-        const matchId = parseInt(loadMatchSelect.value, 10);
-        if (!matchId) {
-            resetToNewMatch();
-            return;
-        }
-
+    function handleLoadMatch(matchId) {
         const transaction = db.transaction(['matches'], 'readonly');
         const objectStore = transaction.objectStore('matches');
         const request = objectStore.get(matchId);
@@ -502,6 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 drawPitch();
                 updateXgDisplay();
                 updateShotLists();
+                closeLoadMatchModal();
             }
         };
     }
@@ -509,7 +543,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetToNewMatch() {
         currentMatch = null;
         selectedShot = null;
-        loadMatchSelect.value = '';
         matchDateInput.value = '';
         homeTeamNameInput.value = '';
         awayTeamNameInput.value = '';
@@ -661,27 +694,22 @@ document.addEventListener('DOMContentLoaded', () => {
         drawPitch();
         updateEditDeleteButtons();
     }
- 
-    function updateDeleteMatchButton() {
-        deleteMatchButton.disabled = !currentMatch;
-    }
- 
-    function deleteCurrentMatch() {
-        if (!currentMatch || !currentMatch.id) return;
- 
-        if (!confirm(`Are you sure you want to delete the match "${currentMatch.name}"? This action cannot be undone.`)) {
+
+    function deleteMatchFromModal(matchId, matchName) {
+        if (!confirm(`Are you sure you want to delete the match "${matchName}"? This action cannot be undone.`)) {
             return;
         }
- 
+
         const transaction = db.transaction(['matches'], 'readwrite');
         const objectStore = transaction.objectStore('matches');
-        const request = objectStore.delete(currentMatch.id);
- 
+        const request = objectStore.delete(matchId);
+
         request.onsuccess = () => {
             alert('Match deleted successfully!');
-            loadMatchesIntoSelect();
-            resetToNewMatch();
-            closeModal();
+            if (currentMatch && currentMatch.id === matchId) {
+                resetToNewMatch();
+            }
+            loadMatchesIntoModal();
         };
         request.onerror = (event) => console.error('Error deleting match:', event.target.errorCode);
     }
