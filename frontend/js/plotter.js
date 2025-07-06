@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctx = canvas.getContext('2d');
     const pitchContainer = document.getElementById('pitch-container');
     const loadMatchSelect = document.getElementById('load-match');
-    const matchNameInput = document.getElementById('match-name');
+    const matchDateInput = document.getElementById('match-date');
     const homeTeamNameInput = document.getElementById('home-team-name');
     const awayTeamNameInput = document.getElementById('away-team-name');
     const homeTeamColorInput = document.getElementById('home-team-color');
@@ -199,6 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadMatchSelect.addEventListener('change', handleLoadMatch);
         homeTeamNameInput.addEventListener('input', () => updateTeamLabels());
         awayTeamNameInput.addEventListener('input', () => updateTeamLabels());
+        matchDateInput.addEventListener('input', () => updateTeamLabels());
         matchDetailsModalButton.addEventListener('click', openModal);
 
         // Close modal if clicking outside of it
@@ -239,13 +240,20 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateTeamLabels() {
         const homeName = homeTeamNameInput.value || 'Home Team';
         const awayName = awayTeamNameInput.value || 'Away Team';
+        const matchDate = matchDateInput.value;
+
         homeTeamLabel.textContent = homeName;
         awayTeamLabel.textContent = awayName;
         homeTeamXgLabel.textContent = `${homeName} xG`;
         awayTeamXgLabel.textContent = `${awayName} xG`;
         homeShotListHeader.textContent = `${homeName} Shots`;
         awayShotListHeader.textContent = `${awayName} Shots`;
-        matchTitleDisplay.textContent = matchNameInput.value || 'xG match plotter';
+
+        if (homeTeamNameInput.value && awayTeamNameInput.value && matchDate) {
+            matchTitleDisplay.textContent = `${homeTeamNameInput.value} vs ${awayTeamNameInput.value} - ${matchDate}`;
+        } else {
+            matchTitleDisplay.textContent = 'xG match plotter';
+        }
     }
 
     async function handleCanvasClick(event) {
@@ -322,31 +330,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveMatchDetails() {
-        const matchName = matchNameInput.value;
         const homeTeamName = homeTeamNameInput.value;
         const awayTeamName = awayTeamNameInput.value;
+        const matchDate = matchDateInput.value;
         const homeTeamColor = homeTeamColorInput.value;
         const awayTeamColor = awayTeamColorInput.value;
 
-        if (!matchName || !homeTeamName || !awayTeamName) {
+        if (!homeTeamName || !awayTeamName || !matchDate) {
             alert('Please fill in all match details.');
             return;
         }
 
+        const matchTitle = `${homeTeamName} vs ${awayTeamName} - ${matchDate}`;
+
         if (currentMatch) {
             // Update existing match
-            currentMatch.name = matchName;
+            currentMatch.name = matchTitle;
+            currentMatch.date = matchDate;
             currentMatch.homeTeam = homeTeamName;
             currentMatch.awayTeam = awayTeamName;
             currentMatch.homeColor = homeTeamColor;
             currentMatch.awayColor = awayTeamColor;
             updateMatchInDB();
-            updateMatchTitleDisplay();
+            updateTeamLabels();
             closeModal();
         } else {
             // Create new match
             currentMatch = {
-                name: matchName,
+                name: matchTitle,
+                date: matchDate,
                 homeTeam: homeTeamName,
                 awayTeam: awayTeamName,
                 homeColor: homeTeamColor,
@@ -368,7 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentMatch.id = event.target.result;
             alert('Match saved!');
             loadMatchesIntoSelect();
-            updateMatchTitleDisplay();
+            updateTeamLabels();
             closeModal();
         };
         request.onerror = (event) => console.error('Error saving match:', event.target.errorCode);
@@ -422,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
         request.onsuccess = () => {
             currentMatch = request.result;
             if (currentMatch) {
-                matchNameInput.value = currentMatch.name;
+                matchDateInput.value = currentMatch.date;
                 homeTeamNameInput.value = currentMatch.homeTeam;
                 awayTeamNameInput.value = currentMatch.awayTeam;
                 homeTeamColorInput.value = currentMatch.homeColor;
@@ -431,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 drawPitch();
                 updateXgDisplay();
                 updateShotLists();
-                updateMatchTitleDisplay();
+                updateTeamLabels();
             }
         };
     }
@@ -439,7 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetToNewMatch() {
         currentMatch = null;
         selectedShot = null;
-        matchNameInput.value = '';
+        matchDateInput.value = '';
         homeTeamNameInput.value = '';
         awayTeamNameInput.value = '';
         homeTeamColorInput.value = '#ff0000';
@@ -451,7 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateXgDisplay();
         updateShotLists();
         updateEditDeleteButtons();
-        updateMatchTitleDisplay();
+        updateTeamLabels();
     }
 
     function updateXgDisplay() {
@@ -531,27 +543,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function saveShotChanges() {
         if (!selectedShot) return;
-
-        currentMatch.shots[selectedShot.index].situation = editSituationSelect.value;
-        currentMatch.shots[selectedShot.index].shotType = editShotTypeSelect.value;
-        
-        // Recalculate xG
+    
+        const newSituation = editSituationSelect.value;
+        const newShotType = editShotTypeSelect.value;
+    
+        // Recalculate xG using the new values
         const shot = currentMatch.shots[selectedShot.index];
         const attackingLeft = (shot.team === 'home' && currentMatch.homeAttacking === 'left') || (shot.team === 'away' && currentMatch.awayAttacking === 'left');
         let apiX = shot.x;
         if (attackingLeft) {
             apiX = PITCH_LENGTH_METERS - shot.x;
         }
-        callXGPrediction(apiX, shot.y, shot.situation, shot.shotType).then(xg => {
+        callXGPrediction(apiX, shot.y, newSituation, newShotType).then(xg => {
             if (xg !== null) {
+                // On successful prediction, update both the master list and the selected shot object
+                currentMatch.shots[selectedShot.index].situation = newSituation;
+                currentMatch.shots[selectedShot.index].shotType = newShotType;
                 currentMatch.shots[selectedShot.index].xg = xg;
+    
+                // This ensures that if the user re-opens the edit modal, it shows the latest data
+                selectedShot.situation = newSituation;
+                selectedShot.shotType = newShotType;
                 selectedShot.xg = xg;
+    
                 updateMatchInDB();
                 updateXgDisplay();
                 updateShotLists();
             }
         });
-
+    
         closeEditShotModal();
     }
 
@@ -571,7 +591,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateShotLists();
         drawPitch();
         updateEditDeleteButtons();
-        updateMatchTitleDisplay();
     }
  
     function updateDeleteMatchButton() {
@@ -594,7 +613,6 @@ document.addEventListener('DOMContentLoaded', () => {
             resetToNewMatch();
             loadMatchesIntoSelect();
             closeModal();
-            updateMatchTitleDisplay();
         };
         request.onerror = (event) => console.error('Error deleting match:', event.target.errorCode);
     }
@@ -633,15 +651,5 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set default values for situation and shot type on initial load
     situationSelect.value = '';
     shotTypeSelect.value = '';
-    updateMatchTitleDisplay(); // Set initial match title
+    updateTeamLabels(); // Set initial match title
 });
-
-function updateMatchTitleDisplay() {
-    const matchTitleDisplay = document.getElementById('match-title');
-    const currentMatch = window.currentMatch; // Accessing global for simplicity
-    if (currentMatch && currentMatch.name) {
-        matchTitleDisplay.textContent = currentMatch.name;
-    } else {
-        matchTitleDisplay.textContent = 'xG match plotter';
-    }
-}
