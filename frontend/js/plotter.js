@@ -443,7 +443,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 drawPitch();
                 updateXgDisplay();
                 updateShotLists();
-                updateTeamLabels();
             }
         };
     }
@@ -451,6 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetToNewMatch() {
         currentMatch = null;
         selectedShot = null;
+        loadMatchSelect.value = '';
         matchDateInput.value = '';
         homeTeamNameInput.value = '';
         awayTeamNameInput.value = '';
@@ -463,7 +463,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateXgDisplay();
         updateShotLists();
         updateEditDeleteButtons();
-        updateTeamLabels();
     }
 
     function updateXgDisplay() {
@@ -610,8 +609,8 @@ document.addEventListener('DOMContentLoaded', () => {
  
         request.onsuccess = () => {
             alert('Match deleted successfully!');
-            resetToNewMatch();
             loadMatchesIntoSelect();
+            resetToNewMatch();
             closeModal();
         };
         request.onerror = (event) => console.error('Error deleting match:', event.target.errorCode);
