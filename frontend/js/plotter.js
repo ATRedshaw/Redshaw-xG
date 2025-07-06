@@ -300,13 +300,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateTeamLabels(homeName, awayName) {
         const homeDisplayName = homeName || 'Home Team';
         const awayDisplayName = awayName || 'Away Team';
+        const generalMaxLength = 15; // Max length for general team names
+        const xgBoxMaxLength = 8; // Max length for xG box team names
 
-        homeTeamLabel.textContent = homeDisplayName;
-        awayTeamLabel.textContent = awayDisplayName;
-        homeTeamXgLabel.textContent = `${homeDisplayName} xG`;
-        awayTeamXgLabel.textContent = `${awayDisplayName} xG`;
-        homeShotListHeader.textContent = `${homeDisplayName} Shots`;
-        awayShotListHeader.textContent = `${awayDisplayName} Shots`;
+        homeTeamLabel.textContent = truncateText(homeDisplayName, generalMaxLength);
+        awayTeamLabel.textContent = truncateText(awayDisplayName, generalMaxLength);
+        homeTeamXgLabel.textContent = `${truncateText(homeDisplayName, xgBoxMaxLength)} xG`;
+        awayTeamXgLabel.textContent = `${truncateText(awayDisplayName, xgBoxMaxLength)} xG`;
+        homeShotListHeader.textContent = `${truncateText(homeDisplayName, generalMaxLength)} Shots`;
+        awayShotListHeader.textContent = `${truncateText(awayDisplayName, generalMaxLength)} Shots`;
     }
 
     function updateMatchTitleDisplay() {
@@ -500,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 matchElement.dataset.matchId = match.id;
 
                 const matchName = document.createElement('span');
-                matchName.textContent = truncateText(match.name, 45);
+                matchName.textContent = truncateText(match.name, 25); // Shortened for load modal
                 matchName.className = 'font-medium text-slate-800';
                 matchElement.appendChild(matchName);
 
