@@ -215,6 +215,24 @@ document.addEventListener('DOMContentLoaded', () => {
         editShotButton.addEventListener('click', openEditShotModal);
         deleteShotButton.addEventListener('click', deleteSelectedShot);
         saveShotChangesButton.addEventListener('click', saveShotChanges);
+
+        situationSelect.addEventListener('change', () => {
+            if (situationSelect.value === 'Penalty') {
+                shotTypeSelect.value = '';
+                shotTypeSelect.disabled = true;
+            } else {
+                shotTypeSelect.disabled = false;
+            }
+        });
+
+        editSituationSelect.addEventListener('change', () => {
+            if (editSituationSelect.value === 'Penalty') {
+                editShotTypeSelect.value = '';
+                editShotTypeSelect.disabled = true;
+            } else {
+                editShotTypeSelect.disabled = false;
+            }
+        });
     }
 
     function openModal() {
@@ -230,6 +248,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!selectedShot) return;
         editSituationSelect.value = selectedShot.situation;
         editShotTypeSelect.value = selectedShot.shotType;
+    
+        if (editSituationSelect.value === 'Penalty') {
+            editShotTypeSelect.disabled = true;
+        } else {
+            editShotTypeSelect.disabled = false;
+        }
+        
         editShotModal.classList.remove('hidden');
     }
 
@@ -276,6 +301,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedShot) {
             // Reposition existing shot
             const attackingLeft = (selectedShot.team === 'home' && currentMatch.homeAttacking === 'left') || (selectedShot.team === 'away' && currentMatch.awayAttacking === 'left');
+
+            if (selectedShot.situation === 'Penalty') {
+                const penaltySpotX = attackingLeft ? PENALTY_SPOT_DISTANCE : PITCH_LENGTH_METERS - PENALTY_SPOT_DISTANCE;
+                const penaltySpotY = PITCH_WIDTH_METERS / 2;
+                const distance = Math.sqrt(Math.pow(metersX - penaltySpotX, 2) + Math.pow(metersY - penaltySpotY, 2));
+
+                if (distance > 1) { // If moved more than 1 meter away from the spot
+                    selectedShot.situation = ''; // Change situation to 'Not Specified'
+                }
+            }
+
             let apiX = metersX;
             if (attackingLeft) {
                 apiX = PITCH_LENGTH_METERS - metersX;
@@ -283,9 +319,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const xg = await callXGPrediction(apiX, metersY, selectedShot.situation, selectedShot.shotType);
             if (xg === null) return;
 
-            currentMatch.shots[selectedShot.index].x = metersX;
-            currentMatch.shots[selectedShot.index].y = metersY;
-            currentMatch.shots[selectedShot.index].xg = xg;
+            const shotToUpdate = currentMatch.shots[selectedShot.index];
+            shotToUpdate.x = metersX;
+            shotToUpdate.y = metersY;
+            shotToUpdate.xg = xg;
+            shotToUpdate.situation = selectedShot.situation;
             
             selectedShot.x = metersX;
             selectedShot.y = metersY;
@@ -300,16 +338,21 @@ document.addEventListener('DOMContentLoaded', () => {
             // Add new shot
             const plottingFor = plotForHomeRadio.checked ? 'home' : 'away';
             const attackingLeft = (plottingFor === 'home' && currentMatch.homeAttacking === 'left') || (plottingFor === 'away' && currentMatch.awayAttacking === 'left');
-
+    
+            if (situationSelect.value === 'Penalty') {
+                metersX = attackingLeft ? PENALTY_SPOT_DISTANCE : PITCH_LENGTH_METERS - PENALTY_SPOT_DISTANCE;
+                metersY = PITCH_WIDTH_METERS / 2;
+            }
+    
             let apiX = metersX;
             if (attackingLeft) {
                 apiX = PITCH_LENGTH_METERS - metersX;
             }
-
+    
             const xg = await callXGPrediction(apiX, metersY, situationSelect.value, shotTypeSelect.value);
-
+    
             if (xg === null) return;
-
+    
             const newShot = {
                 x: metersX,
                 y: metersY,
@@ -546,28 +589,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const newSituation = editSituationSelect.value;
         const newShotType = editShotTypeSelect.value;
     
-        // Recalculate xG using the new values
         const shot = currentMatch.shots[selectedShot.index];
         const attackingLeft = (shot.team === 'home' && currentMatch.homeAttacking === 'left') || (shot.team === 'away' && currentMatch.awayAttacking === 'left');
-        let apiX = shot.x;
-        if (attackingLeft) {
-            apiX = PITCH_LENGTH_METERS - shot.x;
-        }
-        callXGPrediction(apiX, shot.y, newSituation, newShotType).then(xg => {
-            if (xg !== null) {
-                // On successful prediction, update both the master list and the selected shot object
-                currentMatch.shots[selectedShot.index].situation = newSituation;
-                currentMatch.shots[selectedShot.index].shotType = newShotType;
-                currentMatch.shots[selectedShot.index].xg = xg;
+        
+        let metersX = shot.x;
+        let metersY = shot.y;
     
-                // This ensures that if the user re-opens the edit modal, it shows the latest data
+        if (newSituation === 'Penalty') {
+            metersX = attackingLeft ? PENALTY_SPOT_DISTANCE : PITCH_LENGTH_METERS - PENALTY_SPOT_DISTANCE;
+            metersY = PITCH_WIDTH_METERS / 2;
+        }
+    
+        let apiX = metersX;
+        if (attackingLeft) {
+            apiX = PITCH_LENGTH_METERS - metersX;
+        }
+    
+        callXGPrediction(apiX, metersY, newSituation, newShotType).then(xg => {
+            if (xg !== null) {
+                const shotToUpdate = currentMatch.shots[selectedShot.index];
+                shotToUpdate.situation = newSituation;
+                shotToUpdate.shotType = newShotType;
+                shotToUpdate.x = metersX;
+                shotToUpdate.y = metersY;
+                shotToUpdate.xg = xg;
+    
                 selectedShot.situation = newSituation;
                 selectedShot.shotType = newShotType;
+                selectedShot.x = metersX;
+                selectedShot.y = metersY;
                 selectedShot.xg = xg;
     
                 updateMatchInDB();
-                updateXgDisplay();
-                updateShotLists();
+                drawPitch();
             }
         });
     
