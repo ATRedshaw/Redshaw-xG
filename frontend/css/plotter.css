@@ -1,1 +1,18 @@
 /* Styles for the plotter page */
+
+/* Mobile-first ordering using grid */
+@media (max-width: 1023px) {
+    main {
+        display: flex;
+        flex-direction: column;
+    }
+    #pitch-wrapper {
+        order: 1;
+    }
+    #controls-wrapper {
+        order: 2;
+    }
+    #stats-wrapper {
+        order: 3;
+    }
+}

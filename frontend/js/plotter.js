@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteMatchButton = document.getElementById('delete-match-button');
     const matchDetailsModal = document.getElementById('match-details-modal');
     const matchDetailsModalButton = document.getElementById('match-details-modal-button');
+    const matchTitleDisplay = document.getElementById('match-title');
     const plotForHomeRadio = document.getElementById('plot-for-home');
     const plotForAwayRadio = document.getElementById('plot-for-away');
     const homeTeamLabel = document.getElementById('plot-for-home-label');
@@ -193,15 +194,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupEventListeners() {
         window.addEventListener('resize', setupCanvas);
         canvas.addEventListener('click', handleCanvasClick);
-        saveMatchDetailsButton.addEventListener('click', () => {
-            saveMatchDetails();
-            closeModal();
-        });
+        saveMatchDetailsButton.addEventListener('click', saveMatchDetails);
         deleteMatchButton.addEventListener('click', deleteCurrentMatch);
-        matchDetailsModalButton.addEventListener('click', openModal);
         loadMatchSelect.addEventListener('change', handleLoadMatch);
         homeTeamNameInput.addEventListener('input', () => updateTeamLabels());
         awayTeamNameInput.addEventListener('input', () => updateTeamLabels());
+        matchDetailsModalButton.addEventListener('click', openModal);
 
         // Close modal if clicking outside of it
         window.addEventListener('click', (event) => {
@@ -220,6 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openModal() {
         matchDetailsModal.classList.remove('hidden');
+        updateDeleteMatchButton();
     }
 
     function closeModal() {
@@ -246,6 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
         awayTeamXgLabel.textContent = `${awayName} xG`;
         homeShotListHeader.textContent = `${homeName} Shots`;
         awayShotListHeader.textContent = `${awayName} Shots`;
+        matchTitleDisplay.textContent = matchNameInput.value || 'xG match plotter';
     }
 
     async function handleCanvasClick(event) {
@@ -317,6 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
             drawPitch();
             updateShotLists();
             updateXgDisplay();
+            updateMatchTitleDisplay();
         }
     }
 
@@ -340,6 +341,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentMatch.homeColor = homeTeamColor;
             currentMatch.awayColor = awayTeamColor;
             updateMatchInDB();
+            updateMatchTitleDisplay();
+            closeModal();
         } else {
             // Create new match
             currentMatch = {
@@ -365,6 +368,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentMatch.id = event.target.result;
             alert('Match saved!');
             loadMatchesIntoSelect();
+            updateMatchTitleDisplay();
+            closeModal();
         };
         request.onerror = (event) => console.error('Error saving match:', event.target.errorCode);
     }
@@ -426,6 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 drawPitch();
                 updateXgDisplay();
                 updateShotLists();
+                updateMatchTitleDisplay();
             }
         };
     }
@@ -445,6 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateXgDisplay();
         updateShotLists();
         updateEditDeleteButtons();
+        updateMatchTitleDisplay();
     }
 
     function updateXgDisplay() {
@@ -564,6 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateShotLists();
         drawPitch();
         updateEditDeleteButtons();
+        updateMatchTitleDisplay();
     }
  
     function updateDeleteMatchButton() {
@@ -586,6 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
             resetToNewMatch();
             loadMatchesIntoSelect();
             closeModal();
+            updateMatchTitleDisplay();
         };
         request.onerror = (event) => console.error('Error deleting match:', event.target.errorCode);
     }
@@ -624,4 +633,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set default values for situation and shot type on initial load
     situationSelect.value = '';
     shotTypeSelect.value = '';
+    updateMatchTitleDisplay(); // Set initial match title
 });
+
+function updateMatchTitleDisplay() {
+    const matchTitleDisplay = document.getElementById('match-title');
+    const currentMatch = window.currentMatch; // Accessing global for simplicity
+    if (currentMatch && currentMatch.name) {
+        matchTitleDisplay.textContent = currentMatch.name;
+    } else {
+        matchTitleDisplay.textContent = 'xG match plotter';
+    }
+}

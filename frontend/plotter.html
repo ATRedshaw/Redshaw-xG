@@ -45,59 +45,23 @@
     <div class="container mx-auto p-4 lg:p-8">
 
         <!-- Header -->
-        <header class="mb-6 text-center lg:text-left">
-            <h1 class="text-4xl font-bold text-slate-900">Shot Plotter</h1>
-            <p class="mt-1 text-lg text-slate-600">Plot shots for a match and see the xG value for each shot.</p>
-        </header>
+        <!-- Main Content Area: Grid layout for flexible ordering -->
+        <main class="grid grid-cols-1 lg:grid-cols-4 lg:gap-8">
 
-        <!-- Main Content Area: Flexbox for two-column layout on large screens -->
-        <main class="flex flex-col lg:flex-row lg:gap-8">
-
-            <!-- Left Column: Contains the pitch visualization and info display -->
-            <div class="lg:w-3/4 w-full">
+            <!-- Pitch Area -->
+            <div id="pitch-wrapper" class="lg:col-span-3">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
+                    <h2 id="match-title" class="text-2xl font-bold text-slate-900 mb-2 sm:mb-0">xG match plotter</h2>
+                    <button id="match-details-modal-button" class="py-2.5 px-4 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors w-full sm:w-auto">Match Details</button>
+                </div>
                 <div id="pitch-container" class="w-full bg-white shadow-lg rounded-lg overflow-hidden relative">
                     <canvas id="football-pitch" class="block w-full h-auto cursor-crosshair"></canvas>
                 </div>
-                <div class="mt-4 bg-white shadow-lg rounded-lg p-4">
-                    <div class="flex justify-around text-center">
-                        <div>
-                            <h3 id="home-team-xg-label" class="text-lg font-bold text-slate-900">Home Team xG</h3>
-                            <p id="home-team-xg" class="text-2xl font-bold text-blue-600">0.00</p>
-                        </div>
-                        <div>
-                            <h3 class="text-lg font-bold text-slate-900">Selected Shot xG</h3>
-                            <p id="selected-shot-xg" class="text-2xl font-bold text-slate-800">-</p>
-                            <div class="mt-2">
-                                <button id="edit-shot-button" class="px-3 py-1 bg-yellow-500 text-white text-sm font-medium rounded-md shadow-sm hover:bg-yellow-600 disabled:bg-slate-400" disabled>Edit</button>
-                                <button id="delete-shot-button" class="px-3 py-1 bg-red-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-red-700 disabled:bg-slate-400" disabled>Delete</button>
-                            </div>
-                        </div>
-                        <div>
-                            <h3 id="away-team-xg-label" class="text-lg font-bold text-slate-900">Away Team xG</h3>
-                            <p id="away-team-xg" class="text-2xl font-bold text-blue-600">0.00</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-4 grid grid-cols-2 gap-4">
-                    <div>
-                        <h3 class="text-xl font-bold text-slate-900 mb-2" id="home-shot-list-header">Home Shots</h3>
-                        <ul id="home-shot-list" class="bg-white shadow-lg rounded-lg p-2">
-                            <!-- Shot items will be added here -->
-                        </ul>
-                    </div>
-                    <div>
-                        <h3 class="text-xl font-bold text-slate-900 mb-2" id="away-shot-list-header">Away Shots</h3>
-                        <ul id="away-shot-list" class="bg-white shadow-lg rounded-lg p-2">
-                            <!-- Shot items will be added here -->
-                        </ul>
-                    </div>
-                </div>
             </div>
 
-            <!-- Right Column: Contains user controls -->
-            <aside class="lg:w-1/4 w-full mt-6 lg:mt-0">
-                <div class="bg-white p-6 rounded-lg shadow-lg sticky top-8">
-                    <button id="match-details-modal-button" class="w-full py-2.5 px-4 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors mb-4">Match Details</button>
+            <!-- Plotting Controls -->
+            <aside id="controls-wrapper" class="lg:col-span-1 lg:row-start-1 lg:col-start-4">
+                <div class="bg-white p-6 rounded-lg shadow-lg sticky top-8 mt-6 lg:mt-0">
                     <h2 class="text-2xl font-bold text-slate-800 border-b border-slate-200 pb-3 my-4">Plotting Controls</h2>
                     <div class="mb-4">
                         <span class="block text-sm font-medium text-slate-600 mb-2">Plot for:</span>
@@ -135,6 +99,44 @@
                     </div>
                 </div>
             </aside>
+
+            <!-- Stats and Shot Lists -->
+            <div id="stats-wrapper" class="lg:col-span-3">
+                <div class="mt-4 bg-white shadow-lg rounded-lg p-4">
+                    <div class="flex justify-around text-center">
+                        <div>
+                            <h3 id="home-team-xg-label" class="text-lg font-bold text-slate-900">Home Team xG</h3>
+                            <p id="home-team-xg" class="text-2xl font-bold text-blue-600">0.00</p>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-900">Selected Shot xG</h3>
+                            <p id="selected-shot-xg" class="text-2xl font-bold text-slate-800">-</p>
+                            <div class="mt-2">
+                                <button id="edit-shot-button" class="px-3 py-1 bg-yellow-500 text-white text-sm font-medium rounded-md shadow-sm hover:bg-yellow-600 disabled:bg-slate-400" disabled>Edit</button>
+                                <button id="delete-shot-button" class="px-3 py-1 bg-red-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-red-700 disabled:bg-slate-400" disabled>Delete</button>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 id="away-team-xg-label" class="text-lg font-bold text-slate-900">Away Team xG</h3>
+                            <p id="away-team-xg" class="text-2xl font-bold text-blue-600">0.00</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 grid grid-cols-2 gap-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-900 mb-2" id="home-shot-list-header">Home Shots</h3>
+                        <ul id="home-shot-list" class="bg-white shadow-lg rounded-lg p-2">
+                            <!-- Shot items will be added here -->
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-900 mb-2" id="away-shot-list-header">Away Shots</h3>
+                        <ul id="away-shot-list" class="bg-white shadow-lg rounded-lg p-2">
+                            <!-- Shot items will be added here -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
