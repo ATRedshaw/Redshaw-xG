@@ -20,6 +20,11 @@ except FileNotFoundError:
     heatmap_data = None
 
 # ---------- ROUTES ----------
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint."""
+    return jsonify({'status': 'healthy'}), 200
+
 @app.route('/redshaw-xg/api/predict', methods=['POST'])
 def predict():
     """POST endpoint to predict based on input features and select appropriate model."""
