@@ -99,7 +99,7 @@ def predict():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('redshaw-xg/api/predict/grid', methods=['GET'])
+@app.route('/redshaw-xg/api/predict/grid', methods=['GET'])
 def predict_grid():
     """GET endpoint to retrieve a heatmap grid for a given situation and shot type."""
     if heatmap_data is None:
