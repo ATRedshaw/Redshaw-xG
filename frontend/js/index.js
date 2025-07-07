@@ -192,7 +192,7 @@ async function callXGPrediction(x, y) {
     };
 
     try {
-        const response = await fetch('https://redshaw-xg.onrender.com/api/predict', {
+        const response = await fetch('https://redshaw-web-apps.onrender.com/api/redshaw-xg/predict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(fetchBody)
