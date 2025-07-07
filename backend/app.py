@@ -20,7 +20,7 @@ except FileNotFoundError:
     heatmap_data = None
 
 # ---------- ROUTES ----------
-@app.route('/api/redshaw-xg/predict', methods=['POST'])
+@app.route('/redshaw-xg/api/predict', methods=['POST'])
 def predict():
     """POST endpoint to predict based on input features and select appropriate model."""
     try:
@@ -94,7 +94,7 @@ def predict():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/redshaw-xg/predict/grid', methods=['GET'])
+@app.route('redshaw-xg/api/predict/grid', methods=['GET'])
 def predict_grid():
     """GET endpoint to retrieve a heatmap grid for a given situation and shot type."""
     if heatmap_data is None:
