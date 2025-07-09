@@ -103,7 +103,7 @@
 
         <!-- Text Content Section -->
         <section class="mt-8 bg-white shadow-lg rounded-lg p-6 lg:p-8">
-            <h2 class="text-3xl font-bold text-slate-900 mb-4">From Raw Data to Probabilistic xG Outputs:</h2>
+            <h2 class="text-3xl font-bold text-slate-900 mb-4">From Raw Data to Probabilistic xG Mapping</h2>
             <div class="text-slate-700 space-y-6 text-base leading-relaxed">
                 <div>
                     <h3 class="text-2xl font-semibold text-slate-800 mb-2">So, What Exactly is Expected Goals (xG)?</h3>
@@ -116,16 +116,16 @@
                 </div>
 
                 <div>
-                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 1: Gathering the Data</h3>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 1: Gathering the Raw Ingredients</h3>
                     <p>
                         Every good model starts with good data. The foundation of this xG model is a rich dataset of thousands of shots, scraped from the public football analytics website <a href="https://understat.com/" target="_blank" class="text-blue-600 hover:underline">Understat</a>. A custom Python script was developed to systematically gather data across several seasons from Europe's top leagues, including the Premier League, La Liga, and the Bundesliga. This script navigates the site, extracts detailed shot-level data from match pages, capturing everything from the coordinates on the pitch to the game situation, and organises it for the next stage.
                     </p>
                 </div>
 
                 <div>
-                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 2: Cleansing and Feature Engineering</h3>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 2: Preparing the Data</h3>
                     <p>
-                        Raw data is rarely perfect. The next step involved a rigorous cleansing process to handle inconsistencies and prepare the dataset for modelling. Once clean, the real magic begins with feature engineering. The raw `X` and `Y` coordinates of a shot are useful, but we can derive more powerful predictive features from them. Key engineered features include:
+                        Raw data is rarely perfect. The next step involved a rigorous cleansing process to handle inconsistencies and prepare the dataset for modelling. Once clean, the real magic begins with <span class="font-semibold">feature engineering</span>. The raw `X` and `Y` coordinates of a shot are useful, but we can derive more powerful predictive features from them. Key engineered features include:
                     </p>
                     <ul class="list-disc list-inside mt-2 pl-4 space-y-1">
                         <li><span class="font-semibold">Distance to Goal:</span> A straightforward calculation of the Euclidean distance from the shot location to the centre of the goal.</li>
@@ -137,7 +137,7 @@
                 </div>
 
                 <div>
-                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 3: Training the Models</h3>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 3: Building the Intelligence</h3>
                     <p>
                         With a fully preprocessed dataset, the next phase was to train the predictive models. This project uses <span class="font-semibold">Logistic Regression</span>, a robust and highly interpretable algorithm well-suited for binary classification tasks like predicting a goal (1) or no goal (0).
                     </p>
@@ -154,9 +154,37 @@
                         Each model was trained and fine-tuned using `scikit-learn`, with hyperparameters optimised through randomised search and cross-validation to ensure robust performance.
                     </p>
                 </div>
+                
+                <div>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 4: Pre-calculating Heatmaps for Visualisation</h3>
+                    <p>
+                        To offer a richer understanding of the model's predictions, the 'Heatmaps' page visualises xG across the entire pitch. Calculating these values on-the-fly for every user request would be computationally expensive and slow. To solve this, a dedicated Python script (`generate_heatmaps.py`) runs as the final step in the data pipeline.
+                    </p>
+                    <p class="mt-2">
+                        This script iterates over a fine grid of coordinates covering the pitch and calculates the xG value at each point for every possible combination of game situation and shot type. The results are compiled into a single, optimised JSON file (`heatmaps.json`). When you select a filter on the Heatmaps page, the application simply fetches the corresponding pre-calculated grid, ensuring a fast and seamless experience.
+                    </p>
+                </div>
 
                 <div>
-                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Explore the Code Yourself</h3>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 5: Serving the Model with a Flask API</h3>
+                    <p>
+                        With the models trained and heatmaps generated, they need to be made available to the frontend. This is handled by a lightweight backend server built using <span class="font-semibold">Flask</span>, a popular Python web framework. The Flask application (`app.py`) creates a REST API with two key endpoints:
+                    </p>
+                    <ul class="list-disc list-inside mt-2 pl-4 space-y-1">
+                        <li><code class="bg-slate-200 rounded px-1 py-0.5 text-sm">/redshaw-xg/api/predict</code>: This endpoint receives the shot details (coordinates, situation, etc.) from the interactive plotter, uses helper functions to determine the most appropriate model, preprocesses the inputs, and returns the live xG prediction.</li>
+                        <li><code class="bg-slate-200 rounded px-1 py-0.5 text-sm">/redshaw-xg/api/predict/grid</code>: This endpoint serves the pre-generated heatmap data from the `heatmaps.json` file, allowing the frontend to visualise the model's predictions quickly.</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 6: Deployment to the Web</h3>
+                    <p>
+                        To bring this all together into a publicly accessible web application, the project is deployed across two services. The backend Flask API is hosted on <a href="https://render.com/" target="_blank" class="text-blue-600 hover:underline">Render</a>, a cloud platform designed for easily deploying and scaling web applications. The frontend (i.e. all the HTML, CSS, and JavaScript files you're interacting with right now) is served as a static site using <a href="https://pages.github.com/" target="_blank" class="text-blue-600 hover:underline">GitHub Pages</a>.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 7: Explore the Code Yourself</h3>
                     <p>
                         This entire project, from the data pipeline to the interactive frontend, is open-source. If you're interested in the technical details or just want to see the code, you can find the full repository on GitHub.
                     </p>
