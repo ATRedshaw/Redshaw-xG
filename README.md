@@ -102,13 +102,15 @@ To run this project on your local machine, you'll need to run the backend server
     cd frontend
     ```
 
+    **Note:** If you are running the backend server locally, ensure to update the API URL in each of the JavaScript files to point to your local server's address (e.g., `http://127.0.0.1:5000/redshaw-xg/api/predict`).
+
 2.  **Serve the HTML files.** You can use a simple HTTP server. If you have Python installed, you can use its built-in server:
     ```bash
     python3 -m http.server
     ```
 
 3.  **Access the application:**
-    Open your web browser and go to `http://localhost:8000`.
+    Open your web browser and go to `http://localhost:8000`
 
 ## Project Structure
 
