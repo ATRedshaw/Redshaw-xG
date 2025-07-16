@@ -97,27 +97,29 @@
 
                         <h3 class="text-xl font-semibold text-slate-700 mt-4 mb-2">Parameters</h3>
                         <ul class="list-disc list-inside space-y-2">
-                            <li><span class="font-semibold">x</span> (float, required): The x-coordinate of the shot, normalised between 0 and 1.</li>
-                            <li><span class="font-semibold">y</span> (float, required): The y-coordinate of the shot, normalised between 0 and 1.</li>
-                            <li><span class="font-semibold">situation</span> (string, required): The game situation. Valid values are: <code class="text-sm">OpenPlay</code>, <code class="text-sm">SetPiece</code>, <code class="text-sm">DirectFreekick</code>, <code class="text-sm">FromCorner</code>, <code class="text-sm">Penalty</code>.</li>
-                            <li><span class="font-semibold">shot_type</span> (string, required): The type of shot. Valid values are: <code class="text-sm">Head</code>, <code class="text-sm">RightFoot</code>, <code class="text-sm">LeftFoot</code>, <code class="text-sm">OtherBodyPart</code>.</li>
-                            <li><span class="font-semibold">normalisation</span> (object, optional): An object for handling coordinate normalisation.
+                            <li><span class="font-semibold">x</span> (float, required): The x-coordinate of the shot. Can be a raw coordinate (e.g., in metres) or a normalised value between 0 and 1. See the <code class="text-sm">normalisation</code> parameter for details.</li>
+                            <li><span class="font-semibold">y</span> (float, required): The y-coordinate of the shot. Can be a raw coordinate (e.g., in metres) or a normalised value between 0 and 1. See the <code class="text-sm">normalisation</code> parameter for details.</li>
+                            <li><span class="font-semibold">situation</span> (string, optional): The game situation. If provided, a more specific model that accounts for the situation is used. Valid values are: <code class="text-sm">OpenPlay</code>, <code class="text-sm">SetPiece</code>, <code class="text-sm">DirectFreekick</code>, <code class="text-sm">FromCorner</code>, <code class="text-sm">Penalty</code>.</li>
+                            <li><span class="font-semibold">shot_type</span> (string, optional): The type of shot. If provided, a more specific model that accounts for the shot type is used. Valid values are: <code class="text-sm">Head</code>, <code class="text-sm">RightFoot</code>, <code class="text-sm">LeftFoot</code>, <code class="text-sm">OtherBodyPart</code>.</li>
+                            <li><span class="font-semibold">normalisation</span> (object, required): An object for handling coordinate normalisation.
                                 <ul class="list-disc list-inside pl-4 mt-1">
-                                    <li><span class="font-semibold">is_normalised</span> (boolean): Set to <code class="text-sm">false</code> if providing raw coordinates that need normalisation, or <code class="text-sm">true</code> if coordinates are already normalised.</li>
-                                    <li><span class="font-semibold">max_pitch_width</span> (float): The pitch width to use for normalisation if <code class="text-sm">is_normalised</code> is <code class="text-sm">false</code> (does not need to be provided if <code class="text-sm">is_normalised</code> is <code class="text-sm">true</code>).</li>
-                                    <li><span class="font-semibold">max_pitch_length</span> (float): The pitch length to use for normalisation if <code class="text-sm">is_normalised</code> is <code class="text-sm">false</code> (does not need to be provided if <code class="text-sm">is_normalised</code> is <code class="text-sm">true</code>).</li>
+                                    <li><span class="font-semibold">is_normalised</span> (boolean, required): Must be set to <code class="text-sm">true</code> if the provided <code class="text-sm">x</code> and <code class="text-sm">y</code> are already normalised (between 0 and 1). Set to <code class="text-sm">false</code> if they are raw coordinates that require normalisation by the API.</li>
+                                    <li><span class="font-semibold">max_pitch_width</span> (float, conditional): The pitch width (e.g., 68) to use for normalisation. Required if <code class="text-sm">is_normalised</code> is <code class="text-sm">false</code>.</li>
+                                    <li><span class="font-semibold">max_pitch_length</span> (float, conditional): The pitch length (e.g., 105) to use for normalisation. Required if <code class="text-sm">is_normalised</code> is <code class="text-sm">false</code>.</li>
                                 </ul>
-                                <p class="mt-1">Example: <code class="text-sm">{"is_normalised": false, "max_pitch_width": 68, "max_pitch_length": 105}</code></p>
+                                <p class="mt-1">Example for raw coordinates: <code class="text-sm">{"is_normalised": false, "max_pitch_width": 68, "max_pitch_length": 105}</code></p>
+                                <p class="mt-1">Example for normalised coordinates: <code class="text-sm">{"is_normalised": true}</code></p>
                             </li>
                         </ul>
 
                         <h3 class="text-xl font-semibold text-slate-700 mt-4 mb-2">Successful Response (200 OK)</h3>
+                        <p class="mb-2">A successful request returns a JSON object with the prediction and metadata about the model's inference process.</p>
                         <div class="code-block">
                             <pre><code>{
-    "xG": 0.08,
+    "xG": 0.23,
     "inputs": {
-        "x": 0.85,
-        "y": 0.5,
+        "x": 0.92,
+        "y": 0.57,
         "situation": "OpenPlay",
         "shot_type": "RightFoot",
         "normalisation": {
@@ -128,15 +130,45 @@
     },
     "chosen_model": "advanced_model",
     "chosen_model_features": [
-        "x",
-        "y",
+        "X",
+        "Y",
         "distance_to_goal",
         "angle_to_goal",
         "situation_OpenPlay",
-        "shot_type_RightFoot"
+        "shotType_RightFoot",
+        "interaction_OpenPlay_RightFoot",
+        "..."
     ]
 }</code></pre>
                         </div>
+                        <h4 class="text-lg font-semibold text-slate-700 mt-4 mb-2">Response Body</h4>
+                        <ul class="list-disc list-inside space-y-2">
+                            <li><span class="font-semibold">xG</span> (float): The calculated Expected Goals (xG) value for the shot, rounded to two decimal places.</li>
+                            <li><span class="font-semibold">inputs</span> (object): An object containing the exact inputs that were used by the model for prediction.
+                                <ul class="list-disc list-inside pl-4 mt-1">
+                                    <li><span class="font-semibold">Note:</span> The <code class="text-sm">x</code> and <code class="text-sm">y</code> values in this object are the <strong>normalised coordinates</strong> (0-1 range) that were fed into the model. If you provided raw coordinates, these values will show the result of the normalisation performed by the API.</li>
+                                </ul>
+                            </li>
+                            <li><span class="font-semibold">chosen_model</span> (string): The name of the machine learning model selected by the API based on the provided inputs. Different models are used depending on whether <code class="text-sm">situation</code> and/or <code class="text-sm">shot_type</code> were provided.</li>
+                            <li><span class="font-semibold">chosen_model_features</span> (array of strings): A list of the specific feature names that the chosen model used to make the prediction. This includes the base coordinates and any derived or one-hot encoded features.</li>
+                        </ul>
+
+                        <h4 class="text-lg font-semibold text-slate-700 mt-4 mb-2">Error Responses</h4>
+                        <ul class="list-disc list-inside space-y-2">
+                            <li><span class="font-semibold">400 Bad Request</span>: Returned for invalid input. The response body will contain an <code class="text-sm">error</code> key with a descriptive message, such as:
+                                <ul class="list-disc list-inside pl-4 mt-1 space-y-1">
+                                    <li><code class="text-sm">"Missing x or y coordinate"</code></li>
+                                    <li><code class="text-sm">"Invalid situation - ..."</code></li>
+                                    <li><code class="text-sm">"Invalid shot type - ..."</code></li>
+                                    <li><code class="text-sm">"x and y must be numeric values."</code></li>
+                                    <li><code class="text-sm">"Normalisation dictionary must contain 'is_normalised' key."</code></li>
+                                    <li><code class="text-sm">"In order to carry out normalisation... a max pitch width and a max pitch length need to be provided."</code></li>
+                                    <li><code class="text-sm">"The maximum width and length of the pitch cannot be a negative value."</code></li>
+                                    <li><code class="text-sm">"Coordinates have been incorrectly claimed as normalised..."</code></li>
+                                </ul>
+                            </li>
+                            <li><span class="font-semibold">500 Internal Server Error</span>: Returned for unexpected server errors. The response will contain a generic error message.</li>
+                        </ul>
                     </div>
 
                     <!-- Predict Grid Endpoint -->
@@ -150,11 +182,12 @@
                         </div>
 
                         <h3 class="text-xl font-semibold text-slate-700 mt-4 mb-2">Query Parameters</h3>
+                        <p class="mb-2">Filter the heatmap grid by providing the following optional query parameters. If no parameters are provided, a default grid is returned.</p>
                         <ul class="list-disc list-inside space-y-2">
-                            <li><span class="font-semibold">situation</span> (string, optional): The game situation. Valid values are: <code class="text-sm">OpenPlay</code>, <code class="text-sm">SetPiece</code>, <code class="text-sm">DirectFreekick</code>, <code class="text-sm">FromCorner</code>. 'Penalty' is not supported for grid prediction.</li>
-                            <li><span class="font-semibold">shot_type</span> (string, optional): The type of shot. Valid values are: <code class="text-sm">Head</code>, <code class="text-sm">RightFoot</code>, <code class="text-sm">LeftFoot</code>, <code class="text-sm">OtherBodyPart</code>.</li>
-                            <li><span class="font-semibold">max_length</span> (float, optional): The maximum length of the pitch for scaling coordinates. Requires <code class="text-sm">max_width</code>.</li>
-                            <li><span class="font-semibold">max_width</span> (float, optional): The maximum width of the pitch for scaling coordinates. Requires <code class="text-sm">max_length</code>.</li>
+                            <li><span class="font-semibold">situation</span> (string, optional): Filters the grid for a specific game situation. If omitted, the grid will not be filtered by situation. Valid values are: <code class="text-sm">OpenPlay</code>, <code class="text-sm">SetPiece</code>, <code class="text-sm">DirectFreekick</code>, <code class="text-sm">FromCorner</code>. Note: 'Penalty' is not supported for grid prediction.</li>
+                            <li><span class="font-semibold">shot_type</span> (string, optional): Filters the grid for a specific shot type. If omitted, the grid will not be filtered by shot type. Valid values are: <code class="text-sm">Head</code>, <code class="text-sm">RightFoot</code>, <code class="text-sm">LeftFoot</code>, <code class="text-sm">OtherBodyPart</code>.</li>
+                            <li><span class="font-semibold">max_length</span> (float, optional): The maximum length of the pitch (e.g., 105). If provided along with <code class="text-sm">max_width</code>, the <code class="text-sm">x_coords</code> in the response will be scaled to this dimension. Otherwise, coordinates are returned in their normalised (0-1) form.</li>
+                            <li><span class="font-semibold">max_width</span> (float, optional): The maximum width of the pitch (e.g., 68). If provided along with <code class="text-sm">max_length</code>, the <code class="text-sm">y_coords</code> in the response will be scaled to this dimension. Otherwise, coordinates are returned in their normalised (0-1) form.</li>
                         </ul>
 
                         <h3 class="text-xl font-semibold text-slate-700 mt-4 mb-2">Example Usage</h3>
@@ -163,6 +196,7 @@
                         </div>
 
                         <h3 class="text-xl font-semibold text-slate-700 mt-4 mb-2">Successful Response (200 OK)</h3>
+                        <p class="mb-2">Returns a JSON object containing the grid definition and the corresponding heatmap data.</p>
                         <div class="code-block">
                             <pre><code>{
     "grid_definition": {
@@ -176,6 +210,30 @@
     ]
 }</code></pre>
                         </div>
+                        <h4 class="text-lg font-semibold text-slate-700 mt-4 mb-2">Response Body</h4>
+                        <ul class="list-disc list-inside space-y-2">
+                            <li><span class="font-semibold">grid_definition</span> (object): Contains the coordinate arrays for the heatmap grid.
+                                <ul class="list-disc list-inside pl-4 mt-1">
+                                    <li><span class="font-semibold">x_coords</span> (array of floats): The list of x-coordinates for the grid's columns. These will be scaled if <code class="text-sm">max_length</code> was provided in the request.</li>
+                                    <li><span class="font-semibold">y_coords</span> (array of floats): The list of y-coordinates for the grid's rows. These will be scaled if <code class="text-sm">max_width</code> was provided in the request.</li>
+                                </ul>
+                            </li>
+                            <li><span class="font-semibold">heatmap</span> (2D array of floats): A 2D array (matrix) of xG values. Each value corresponds to the intersection of an x and y coordinate from the <code class="text-sm">grid_definition</code>. The structure is <code class="text-sm">heatmap[y_index][x_index]</code>.</li>
+                        </ul>
+
+                        <h4 class="text-lg font-semibold text-slate-700 mt-4 mb-2">Error Responses</h4>
+                        <ul class="list-disc list-inside space-y-2">
+                            <li><span class="font-semibold">400 Bad Request</span>: Returned for invalid query parameters. The response body will contain an <code class="text-sm">error</code> key with a descriptive message, such as:
+                                <ul class="list-disc list-inside pl-4 mt-1 space-y-1">
+                                    <li><code class="text-sm">"The 'Penalty' situation is not available for grid prediction."</code></li>
+                                    <li><code class="text-sm">"Invalid situation. ..."</code></li>
+                                    <li><code class="text-sm">"Invalid shot type - ..."</code></li>
+                                    <li><code class="text-sm">"max_length and max_width must be positive numbers."</code></li>
+                                </ul>
+                            </li>
+                            <li><span class="font-semibold">404 Not Found</span>: Returned if no heatmap data exists for the specified <code class="text-sm">situation</code> and <code class="text-sm">shot_type</code> combination.</li>
+                            <li><span class="font-semibold">500 Internal Server Error</span>: Returned if the heatmap data file cannot be found on the server or for other unexpected errors.</li>
+                        </ul>
                     </div>
                 </div>
             </div>
