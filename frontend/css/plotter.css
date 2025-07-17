@@ -38,3 +38,8 @@
     width: 95%;
     max-width: 500px;
 }
+.truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

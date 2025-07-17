@@ -84,13 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
         '': 'N/A'
     };
 
-    function truncateText(text, maxLength) {
-        if (text.length > maxLength) {
-            return text.substring(0, maxLength) + '...';
-        }
-        return text;
-    }
-
     // --- DATABASE ---
     function initDB() {
         const request = indexedDB.open(dbName, dbVersion);
@@ -300,20 +293,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateTeamLabels(homeName, awayName) {
         const homeDisplayName = homeName || 'Home Team';
         const awayDisplayName = awayName || 'Away Team';
-        const generalMaxLength = 15; // Max length for general team names
-        const xgBoxMaxLength = 8; // Max length for xG box team names
-
-        homeTeamLabel.textContent = truncateText(homeDisplayName, generalMaxLength);
-        awayTeamLabel.textContent = truncateText(awayDisplayName, generalMaxLength);
-        homeTeamXgLabel.textContent = `${truncateText(homeDisplayName, xgBoxMaxLength)} xG`;
-        awayTeamXgLabel.textContent = `${truncateText(awayDisplayName, xgBoxMaxLength)} xG`;
-        homeShotListHeader.textContent = `${truncateText(homeDisplayName, generalMaxLength)} Shots`;
-        awayShotListHeader.textContent = `${truncateText(awayDisplayName, generalMaxLength)} Shots`;
+    
+        homeTeamLabel.textContent = homeDisplayName;
+        awayTeamLabel.textContent = awayDisplayName;
+        homeTeamXgLabel.textContent = `${homeDisplayName} xG`;
+        awayTeamXgLabel.textContent = `${awayDisplayName} xG`;
+        homeShotListHeader.textContent = `${homeDisplayName} Shots`;
+        awayShotListHeader.textContent = `${awayDisplayName} Shots`;
     }
 
     function updateMatchTitleDisplay() {
         if (currentMatch) {
-            matchTitleDisplay.textContent = truncateText(currentMatch.name, 35);
+            matchTitleDisplay.textContent = currentMatch.name;
         } else {
             matchTitleDisplay.textContent = 'xG match plotter';
         }
@@ -502,8 +493,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 matchElement.dataset.matchId = match.id;
 
                 const matchName = document.createElement('span');
-                matchName.textContent = truncateText(match.name, 25); // Shortened for load modal
-                matchName.className = 'font-medium text-slate-800';
+                matchName.textContent = match.name;
+                matchName.className = 'font-medium text-slate-800 truncate'; // Added truncate
                 matchElement.appendChild(matchName);
 
                 const deleteIcon = document.createElement('span');

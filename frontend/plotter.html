@@ -53,7 +53,7 @@
             <!-- Pitch Area -->
             <div id="pitch-wrapper" class="lg:col-span-3">
                 <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
-                    <h2 id="match-title" class="text-2xl font-bold text-slate-900 mb-2 sm:mb-0">xG match plotter</h2>
+                    <h2 id="match-title" class="text-2xl font-bold text-slate-900 mb-2 sm:mb-0 truncate">xG match plotter</h2>
                     <div class="flex space-x-2">
                         <button id="create-match-modal-button" class="py-2.5 px-4 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors w-full sm:w-auto">Create New Match</button>
                         <button id="load-match-modal-button" class="py-2.5 px-4 bg-gray-600 text-white font-semibold rounded-md shadow-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors w-full sm:w-auto">Load Match</button>
@@ -71,13 +71,13 @@
                     <div class="mb-4">
                         <span class="block text-sm font-medium text-slate-600 mb-2">Plot for:</span>
                         <div class="flex items-center space-x-4">
-                            <div class="flex items-center">
+                            <div class="flex items-center flex-1 min-w-0">
                                 <input type="radio" id="plot-for-home" name="team-select" value="home" class="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500" checked>
-                                <label for="plot-for-home" id="plot-for-home-label" class="ml-2 block text-sm font-medium text-slate-700">Home Team</label>
+                                <label for="plot-for-home" id="plot-for-home-label" class="ml-2 block text-sm font-medium text-slate-700 truncate">Home Team</label>
                             </div>
-                            <div class="flex items-center">
+                            <div class="flex items-center flex-1 min-w-0">
                                 <input type="radio" id="plot-for-away" name="team-select" value="away" class="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500">
-                                <label for="plot-for-away" id="plot-for-away-label" class="ml-2 block text-sm font-medium text-slate-700">Away Team</label>
+                                <label for="plot-for-away" id="plot-for-away-label" class="ml-2 block text-sm font-medium text-slate-700 truncate">Away Team</label>
                             </div>
                         </div>
                     </div>
@@ -109,11 +109,11 @@
             <div id="stats-wrapper" class="lg:col-span-3">
                 <div class="mt-4 bg-white shadow-lg rounded-lg p-4">
                     <div class="flex justify-around text-center">
-                        <div>
-                            <h3 id="home-team-xg-label" class="text-lg font-bold text-slate-900">Home Team xG</h3>
+                        <div class="min-w-0">
+                            <h3 id="home-team-xg-label" class="text-lg font-bold text-slate-900 truncate">Home Team xG</h3>
                             <p id="home-team-xg" class="text-2xl font-bold text-blue-600">0.00</p>
                         </div>
-                        <div>
+                        <div class="flex-shrink-0">
                             <h3 class="text-lg font-bold text-slate-900">Selected Shot xG</h3>
                             <p id="selected-shot-xg" class="text-2xl font-bold text-slate-800">-</p>
                             <div class="mt-2">
@@ -121,21 +121,21 @@
                                 <button id="delete-shot-button" class="px-3 py-1 bg-red-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-red-700 disabled:bg-slate-400" disabled>Delete</button>
                             </div>
                         </div>
-                        <div>
-                            <h3 id="away-team-xg-label" class="text-lg font-bold text-slate-900">Away Team xG</h3>
+                        <div class="min-w-0">
+                            <h3 id="away-team-xg-label" class="text-lg font-bold text-slate-900 truncate">Away Team xG</h3>
                             <p id="away-team-xg" class="text-2xl font-bold text-blue-600">0.00</p>
                         </div>
                     </div>
                 </div>
                 <div class="mt-4 grid grid-cols-2 gap-4">
-                    <div>
-                        <h3 class="text-xl font-bold text-slate-900 mb-2" id="home-shot-list-header">Home Shots</h3>
+                    <div class="min-w-0">
+                        <h3 class="text-xl font-bold text-slate-900 mb-2 truncate" id="home-shot-list-header">Home Shots</h3>
                         <ul id="home-shot-list" class="bg-white shadow-lg rounded-lg p-2">
                             <!-- Shot items will be added here -->
                         </ul>
                     </div>
-                    <div>
-                        <h3 class="text-xl font-bold text-slate-900 mb-2" id="away-shot-list-header">Away Shots</h3>
+                    <div class="min-w-0">
+                        <h3 class="text-xl font-bold text-slate-900 mb-2 truncate" id="away-shot-list-header">Away Shots</h3>
                         <ul id="away-shot-list" class="bg-white shadow-lg rounded-lg p-2">
                             <!-- Shot items will be added here -->
                         </ul>
@@ -197,11 +197,11 @@
                     </div>
                     <div class="mb-4">
                         <label for="home-team-name" class="block text-sm font-medium text-slate-600 mb-1 text-left">Home Team</label>
-                        <input type="text" id="home-team-name" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g. Team A">
+                        <input type="text" id="home-team-name" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g. Team A" maxlength="24">
                     </div>
                     <div class="mb-4">
                         <label for="away-team-name" class="block text-sm font-medium text-slate-600 mb-1 text-left">Away Team</label>
-                        <input type="text" id="away-team-name" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g. Team B">
+                        <input type="text" id="away-team-name" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g. Team B" maxlength="24">
                     </div>
                     <div class="mb-4">
                         <label for="home-team-color" class="block text-sm font-medium text-slate-600 mb-1 text-left">Home Team Colour</label>
