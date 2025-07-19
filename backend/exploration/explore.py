@@ -3,6 +3,7 @@ from analysis.data_aggregation import create_player_match_stats, create_lagged_f
 from analysis.regression_models import run_linear_regressions
 import matplotlib.pyplot as plt
 import os
+import pandas as pd
 
 def main():
     df_with_xg = run_preprocessing_pipeline()
@@ -18,6 +19,9 @@ def main():
 
         # Define window sizes for lagged features
         windows = [1, 2, 4, 8, 16, 32, 64]
+        
+        # To store correlation results for the summary table
+        correlation_summary = []
 
         # 1. Create player match statistics
         player_match_df = create_player_match_stats(df_with_xg)
@@ -41,9 +45,27 @@ def main():
             # Filter out results with notes
             valid_results = [r for r in linear_results if 'note' not in r]
             
+            # Store results for this window
+            for r in valid_results:
+                correlation_summary.append({
+                    'window_size': window,
+                    'predictor': r['predictor'],
+                    'correlation': r['Pearson Correlation']
+                })
+
             if not valid_results:
                 print(f"No valid regression results to plot for window size {window}.")
                 continue
+
+            # Sort results for consistent plot ordering
+            desired_order_map = {
+                'past_goals': 0,
+                'past_xg_basic': 1,
+                'past_xg_shottype': 2,
+                'past_xg_situation': 3,
+                'past_xg_advanced': 4
+            }
+            valid_results.sort(key=lambda r: desired_order_map.get(r['predictor'], 99))
 
             # 4. Create visualisations
             print("\n--- Creating Visualisations ---")
@@ -95,8 +117,11 @@ def main():
                 ax.set_xlim(x_lim)
                 ax.set_ylim(y_lim)
                 
-                # Add text for coefficient and p-value
-                stats_text = f"Coef: {result['Coefficient']:.3f}\nP-val: {result['P-value (Coefficient)']:.3f}"
+                # Add text for correlation and p-value
+                stats_text = (
+                    f"Corr: {result['Pearson Correlation']:.3f}\n"
+                    f"P-val: {result['P-value (Coefficient)']:.3f}"
+                )
                 ax.text(0.95, 0.05, stats_text, transform=ax.transAxes, fontsize=10,
                         verticalalignment='bottom', horizontalalignment='right',
                         bbox=dict(boxstyle='round,pad=0.4', fc='lightgrey', alpha=0.8, ec='black'))
@@ -113,6 +138,26 @@ def main():
             output_path = os.path.join(output_dir, f'linear_regression_window_{window}.png')
             plt.savefig(output_path, dpi=300)
             print(f"\nFigure saved to {output_path}")
+
+        # After the loop, create and save the correlation summary
+        if correlation_summary:
+            summary_df = pd.DataFrame(correlation_summary)
+            pivot_df = summary_df.pivot(index='predictor', columns='window_size', values='correlation')
+            
+            # Reorder the predictors for better comparison
+            desired_order = [
+                'past_goals',
+                'past_xg_basic',
+                'past_xg_shottype',
+                'past_xg_situation',
+                'past_xg_advanced'
+            ]
+            pivot_df = pivot_df.reindex(desired_order)
+
+            summary_output_path = os.path.join('figures', 'correlation_summary.csv')
+            pivot_df.to_csv(summary_output_path, float_format='%.3f')
+            print(f"\nCorrelation summary saved to {summary_output_path}")
+
 
 if __name__ == '__main__':
     main()

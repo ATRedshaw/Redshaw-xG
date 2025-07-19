@@ -33,13 +33,14 @@ def create_lagged_features(player_match_df, past_window_size=5, future_window_si
                 window=past_window_size, closed='left'
             ).sum().reset_index(level=0, drop=True)
 
-    # Calculate Future Outcome
-    lagged_analysis_df['future_goals'] = \
-        lagged_analysis_df.groupby('player_id')['total_goals_match'].shift(
-            periods=-(future_window_size), axis=0
-        ).rolling(
-            window=future_window_size, closed='left'
-        ).sum().reset_index(level=0, drop=True)
+    # Calculate Future Outcome: Sum of goals in the next `future_window_size` matches.
+    # For a given match (row), we want the sum of goals from the next match up to
+    # `future_window_size` matches ahead.
+    future_goals_series = lagged_analysis_df.groupby('player_id')['total_goals_match'].rolling(
+        window=future_window_size, closed='right'
+    ).sum().shift(periods=-future_window_size)
+
+    lagged_analysis_df['future_goals'] = future_goals_series.reset_index(level=0, drop=True)
 
     # Drop rows with NaN values (where past or future windows couldn't be fully calculated)
     lagged_analysis_df = lagged_analysis_df.dropna().reset_index(drop=True)

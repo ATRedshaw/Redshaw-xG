@@ -21,6 +21,14 @@ def run_linear_regressions(lagged_df):
                 X = temp_df[[predictor]]
                 y = temp_df['future_goals']
 
+                # Calculate Pearson correlation
+                if temp_df.shape[0] > 1:
+                    # Use .squeeze() to convert single-column DataFrame to Series for corrcoef
+                    correlation_matrix = np.corrcoef(X.squeeze(), y)
+                    pearson_corr = correlation_matrix[0, 1]
+                else:
+                    pearson_corr = float('nan')
+
                 model = LinearRegression()
                 model.fit(X, y)
                 y_pred = model.predict(X)
@@ -44,6 +52,7 @@ def run_linear_regressions(lagged_df):
                     'MAE': mae,
                     'RMSE': rmse,
                     'Coefficient': coefficient,
+                    'Pearson Correlation': pearson_corr,
                     'Intercept': intercept,
                     'P-value (Coefficient)': p_value,
                     'data': temp_df,
