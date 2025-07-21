@@ -133,7 +133,7 @@ def main():
             plt.tight_layout(rect=[0, 0.03, 1, 0.95])
             
             # Save the figure
-            output_dir = 'figures'
+            output_dir = 'exploration/figures'
             os.makedirs(output_dir, exist_ok=True)
             output_path = os.path.join(output_dir, f'linear_regression_window_{window}.png')
             plt.savefig(output_path, dpi=300)
