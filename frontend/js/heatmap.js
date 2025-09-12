@@ -36,6 +36,9 @@ let scale; // Calculated dynamically based on container size
 let heatmapData = null; // Holds the fetched heatmap data
 const LINE_COLOR = '#000080'; // Navy blue for pitch lines
 
+// --- Backend Health State ---
+let isBackendHealthy = false;
+
 // --- Color Mapping for Heatmap ---
 // Defines the color gradient for xG values from 0.0 to 1.0.
 // Returns an RGBA object for efficient drawing with ImageData.
@@ -290,7 +293,13 @@ async function loadHeatmapData() {
     const situation = situationSelect.value || null;
     const shotType = shotTypeSelect.value || null;
     
+    if (!isBackendHealthy) {
+        alert('Backend server is not active. Please wait or click "Wake Server" to proceed.');
+        return;
+    }
+
     loadButton.disabled = true;
+    showStatus('Loading heatmap data...', 'loading');
 
     try {
         const params = new URLSearchParams();
@@ -309,6 +318,7 @@ async function loadHeatmapData() {
         heatmapData = await response.json();
         
         drawComplete();
+        hideStatus();
         
     } catch (error) {
         console.error('Error loading heatmap:', error);
@@ -328,8 +338,30 @@ window.addEventListener('resize', setupCanvas);
 // Load data when the button is clicked
 loadButton.addEventListener('click', loadHeatmapData);
 
+// Function to enable all interactive elements
+function enablePageInteractions() {
+    loadButton.disabled = false;
+    situationSelect.disabled = false;
+    shotTypeSelect.disabled = false;
+    isBackendHealthy = true;
+    console.log('Heatmap page interactions enabled.');
+    loadHeatmapData(); // Load heatmap once backend is healthy
+}
+
+// Function to disable all interactive elements
+function disablePageInteractions() {
+    loadButton.disabled = true;
+    situationSelect.disabled = true;
+    shotTypeSelect.disabled = true;
+    isBackendHealthy = false;
+    console.log('Heatmap page interactions disabled.');
+}
+
 // Initial setup when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
     setupCanvas();
-    loadHeatmapData();
+    disablePageInteractions(); // Disable interactions until backend is healthy
 });
+
+// Listen for the custom event from health_check.js
+window.addEventListener('backendHealthy', enablePageInteractions);

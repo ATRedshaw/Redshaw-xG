@@ -43,6 +43,9 @@ let targetXG = 0; // Target xG value from prediction
 let xgAnimationStartTime = null;
 const XG_ANIMATION_DURATION_MS = 300; // milliseconds for xG animation
 
+// --- Backend Health State ---
+let isBackendHealthy = false;
+
 /**
  * Converts meter-based coordinates to canvas pixel coordinates.
  * The X-axis is offset by padding. The Y-axis is inverted and offset.
@@ -147,6 +150,11 @@ function setupCanvas() {
  * @param {MouseEvent} event - The click event.
  */
 function handleCanvasClick(event) {
+    if (!isBackendHealthy) {
+        alert('Backend server is not active. Please wait or click "Wake Server" to proceed.');
+        return;
+    }
+
     const rect = canvas.getBoundingClientRect();
     const pixelX = event.clientX - rect.left;
     const pixelY = event.clientY - rect.top;
@@ -220,6 +228,11 @@ async function callXGPrediction(x, y) {
  * Otherwise, it just updates the prediction for the existing point.
  */
 function handleSituationChange() {
+    if (!isBackendHealthy) {
+        alert('Backend server is not active. Please wait or click "Wake Server" to proceed.');
+        return;
+    }
+
     if (situationSelect.value === 'Penalty') {
         // Automatically plot the point at the right penalty spot
         targetPoint = { x: PENALTY_SPOT_RIGHT_X, y: PENALTY_SPOT_Y };
@@ -311,18 +324,40 @@ function animateXG(currentTime) {
 
 // --- EVENT LISTENERS & INITIALIZATION ---
 window.addEventListener('resize', setupCanvas);
-canvas.addEventListener('click', handleCanvasClick);
-situationSelect.addEventListener('change', handleSituationChange);
-shotTypeSelect.addEventListener('change', updateXGPrediction);
+
+// Function to enable all interactive elements
+function enablePageInteractions() {
+    canvas.addEventListener('click', handleCanvasClick);
+    situationSelect.addEventListener('change', handleSituationChange);
+    shotTypeSelect.addEventListener('change', updateXGPrediction);
+    situationSelect.disabled = false;
+    shotTypeSelect.disabled = false;
+    isBackendHealthy = true;
+    console.log('Page interactions enabled.');
+}
+
+// Function to disable all interactive elements
+function disablePageInteractions() {
+    canvas.removeEventListener('click', handleCanvasClick);
+    situationSelect.removeEventListener('change', handleSituationChange);
+    shotTypeSelect.removeEventListener('change', updateXGPrediction);
+    situationSelect.disabled = true;
+    shotTypeSelect.disabled = true;
+    isBackendHealthy = false;
+    console.log('Page interactions disabled.');
+}
 
 // Initial setup on page load
 document.addEventListener('DOMContentLoaded', () => {
     setupCanvas();
-    // Reset dropdowns and enable shot type on page load
+    // Reset dropdowns and disable shot type on page load
     situationSelect.value = ''; // "All Situations"
     shotTypeSelect.value = ''; // "All Shot Types"
-    shotTypeSelect.disabled = false;
+    disablePageInteractions(); // Disable interactions until backend is healthy
     currentXG = 0; // Initialize currentXG
     targetXG = 0; // Initialize targetXG
     xgValue.textContent = 'X.XX'; // Initial display
 });
+
+// Listen for the custom event from health_check.js
+window.addEventListener('backendHealthy', enablePageInteractions);

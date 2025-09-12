@@ -68,6 +68,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const POINT_RADIUS_METERS = 0.5;
     const LINE_COLOR = '#000080';
 
+    // --- Backend Health State ---
+    let isBackendHealthy = false;
+
     const situationMap = {
         'OpenPlay': 'Open Play',
         'FromCorner': 'From Corner',
@@ -96,6 +99,8 @@ document.addEventListener('DOMContentLoaded', () => {
             loadMatchesIntoModal();
             setupEventListeners();
             setupCanvas();
+            // Initial state: disable interactions until backend is healthy
+            disablePageInteractions();
         };
 
         request.onupgradeneeded = (event) => {
@@ -212,7 +217,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- EVENT LISTENERS & LOGIC ---
     function setupEventListeners() {
         window.addEventListener('resize', setupCanvas);
-        canvas.addEventListener('click', handleCanvasClick);
+        
+        // Event listeners for modals and search (always active)
         saveNewMatchButton.addEventListener('click', saveNewMatch);
         createMatchModalButton.addEventListener('click', openCreateMatchModal);
         loadMatchModalButton.addEventListener('click', openLoadMatchModal);
@@ -232,27 +238,50 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // Listen for the custom event from health_check.js
+        window.addEventListener('backendHealthy', enablePageInteractions);
+    }
+
+    function enablePageInteractions() {
+        canvas.addEventListener('click', handleCanvasClick);
+        situationSelect.addEventListener('change', handleSituationChange);
+        shotTypeSelect.addEventListener('change', handleSituationChange); // Re-evaluate shot type on situation change
         editShotButton.addEventListener('click', openEditShotModal);
         deleteShotButton.addEventListener('click', deleteSelectedShot);
         saveShotChangesButton.addEventListener('click', saveShotChanges);
 
-        situationSelect.addEventListener('change', () => {
-            if (situationSelect.value === 'Penalty') {
-                shotTypeSelect.value = '';
-                shotTypeSelect.disabled = true;
-            } else {
-                shotTypeSelect.disabled = false;
-            }
-        });
+        createMatchModalButton.disabled = false;
+        loadMatchModalButton.disabled = false;
+        situationSelect.disabled = false;
+        shotTypeSelect.disabled = false;
+        editShotButton.disabled = false;
+        deleteShotButton.disabled = false;
+        saveNewMatchButton.disabled = false;
+        saveShotChangesButton.disabled = false;
 
-        editSituationSelect.addEventListener('change', () => {
-            if (editSituationSelect.value === 'Penalty') {
-                editShotTypeSelect.value = '';
-                editShotTypeSelect.disabled = true;
-            } else {
-                editShotTypeSelect.disabled = false;
-            }
-        });
+        isBackendHealthy = true;
+        console.log('Plotter page interactions enabled.');
+    }
+
+    function disablePageInteractions() {
+        canvas.removeEventListener('click', handleCanvasClick);
+        situationSelect.removeEventListener('change', handleSituationChange);
+        shotTypeSelect.removeEventListener('change', handleSituationChange);
+        editShotButton.removeEventListener('click', openEditShotModal);
+        deleteShotButton.removeEventListener('click', deleteSelectedShot);
+        saveShotChangesButton.removeEventListener('click', saveShotChanges);
+
+        createMatchModalButton.disabled = true;
+        loadMatchModalButton.disabled = true;
+        situationSelect.disabled = true;
+        shotTypeSelect.disabled = true;
+        editShotButton.disabled = true;
+        deleteShotButton.disabled = true;
+        saveNewMatchButton.disabled = true;
+        saveShotChangesButton.disabled = true;
+
+        isBackendHealthy = false;
+        console.log('Plotter page interactions disabled.');
     }
 
     function openCreateMatchModal() {
@@ -311,6 +340,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleCanvasClick(event) {
+        if (!isBackendHealthy) {
+            alert('Backend server is not active. Please wait or click "Wake Server" to proceed.');
+            return;
+        }
         if (!currentMatch) {
             alert('Please create or load a match before plotting shots.');
             return;
@@ -402,6 +435,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveNewMatch() {
+        if (!isBackendHealthy) {
+            alert('Backend server is not active. Please wait or click "Wake Server" to proceed.');
+            return;
+        }
+
         const homeTeamName = homeTeamNameInput.value;
         const awayTeamName = awayTeamNameInput.value;
         const matchDate = matchDateInput.value;
@@ -633,6 +671,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveShotChanges() {
+        if (!isBackendHealthy) {
+            alert('Backend server is not active. Please wait or click "Wake Server" to proceed.');
+            return;
+        }
         if (!selectedShot) return;
     
         const newSituation = editSituationSelect.value;
@@ -750,4 +792,5 @@ document.addEventListener('DOMContentLoaded', () => {
     shotTypeSelect.value = '';
     updateTeamLabels('Home Team', 'Away Team');
     updateMatchTitleDisplay();
+    // The initial call to disablePageInteractions is now handled within initDB's onsuccess.
 });

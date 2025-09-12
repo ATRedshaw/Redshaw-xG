@@ -6,6 +6,7 @@
     <title>Interactive xG Predictor</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/loading_overlay.css">
     <style>
         /* Base font for the page */
         body {
@@ -15,6 +16,10 @@
 </head>
 
 <body class="bg-slate-100 text-slate-800 antialiased">
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p class="loading-message">Waking up the backend server...</p>
+    </div>
     <nav class="bg-white shadow-lg">
         <div class="container mx-auto px-4 py-3 flex justify-between items-center">
             <a href="index.html" class="text-2xl font-bold text-slate-900">Alex's xG Plotter</a>
@@ -202,5 +207,6 @@
 
     <script src="js/index.js"></script>
     <script src="js/navbar.js"></script>
+    <script src="js/health_check.js"></script>
 </body>
 </html>
