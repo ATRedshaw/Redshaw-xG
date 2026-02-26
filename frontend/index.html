@@ -111,87 +111,86 @@
             <h2 class="text-3xl font-bold text-slate-900 mb-4">From Raw Data to Probabilistic xG Mapping</h2>
             <div class="text-slate-700 space-y-6 text-base leading-relaxed">
                 <div>
-                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">So, What Exactly is Expected Goals (xG)?</h3>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">What is Expected Goals (xG)?</h3>
                     <p>
-                        Expected Goals, or xG, is a powerful metric in football analytics that helps us quantify the quality of a goal-scoring opportunity. Instead of just counting shots, xG assigns a probability to each attempt, representing how likely it was to result in a goal. A shot with an xG of 0.1 is expected to be scored 10% of the time, while a tap-in might have an xG of 0.9 (a 90% chance).
+                        Expected Goals, or xG, is a metric in football analytics that quantifies the quality of a goal-scoring opportunity. Rather than simply counting shots, xG assigns a probability to each attempt, representing how likely it was to result in a goal. A shot with an xG of 0.1 is expected to be scored 10% of the time, whilst a close-range tap-in might carry an xG of 0.9.
                     </p>
                     <p class="mt-2">
-                        This allows for a deeper, more nuanced analysis of team and player performance, moving beyond the luck inherent in the final scoreline. A team that consistently creates high-quality chances (a high cumulative xG) is likely performing well, even if the goals aren't flowing just yet. This interactive plotter is the front-end for a bespoke xG model, built from the ground up. Let's explore how it was made.
+                        This enables a more nuanced analysis of team and player performance, looking beyond the luck often inherent in a final scoreline. A team that consistently creates high-quality chances is likely performing well even when the goals are not coming. This interactive plotter is built on a bespoke xG model trained from the ground up.
                     </p>
                 </div>
 
                 <div>
-                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 1: Gathering the Raw Ingredients</h3>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 1: Gathering the Data</h3>
                     <p>
-                        Every good model starts with good data. The foundation of this xG model is a rich dataset of thousands of shots, scraped from the public football analytics website <a href="https://understat.com/" target="_blank" class="text-blue-600 hover:underline">Understat</a>. A custom Python script was developed to systematically gather data across several seasons from Europe's top leagues, including the Premier League, La Liga, and the Bundesliga. This script navigates the site, extracts detailed shot-level data from match pages, capturing everything from the coordinates on the pitch to the game situation, and organises it for the next stage.
+                        Every good model starts with good data. The foundation of this project is a dataset of hundreds of thousands of shots, scraped from the public football analytics website <a href="https://understat.com/" target="_blank" class="text-blue-600 hover:underline">Understat</a>. A custom Python script gathers data across multiple seasons from Europe's top leagues, including the Premier League, La Liga and the Bundesliga. It extracts detailed shot-level data from match pages, capturing everything from pitch coordinates to game situation, and saves it for the next stage.
                     </p>
                 </div>
 
                 <div>
                     <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 2: Preparing the Data</h3>
                     <p>
-                        Raw data is rarely perfect. The next step involved a rigorous cleansing process to handle inconsistencies and prepare the dataset for modelling. Once clean, the real magic begins with <span class="font-semibold">feature engineering</span>. The raw `X` and `Y` coordinates of a shot are useful, but we can derive more powerful predictive features from them. Key engineered features include:
+                        Raw scraped data is rarely clean. A cleansing step handles inconsistencies before the dataset moves into <span class="font-semibold">feature engineering</span>. The raw X and Y coordinates of a shot are useful on their own, but more powerful predictive features can be derived from them. Key engineered features include:
                     </p>
                     <ul class="list-disc list-inside mt-2 pl-4 space-y-1">
-                        <li><span class="font-semibold">Distance to Goal:</span> A straightforward calculation of the Euclidean distance from the shot location to the centre of the goal.</li>
-                        <li><span class="font-semibold">Angle to Goal:</span> The angle, in radians, that the shooter has to the goal. A wider angle generally means a better chance of scoring. This is calculated using the vectors from the shot location to each goalpost.</li>
+                        <li><span class="font-semibold">Distance to Goal:</span> The Euclidean distance from the shot location to the centre of the goal.</li>
+                        <li><span class="font-semibold">Angle to Goal:</span> The angle in radians that the shooter has on goal, calculated using vectors to each goalpost. A wider angle generally represents a better chance.</li>
                     </ul>
                     <p class="mt-2">
-                        Categorical data, like the <span class="font-semibold">'Situation'</span> (e.g., Open Play, Set Piece) and <span class="font-semibold">'Shot Type'</span> (e.g., Head, Right Foot), were converted into a numerical format using one-hot encoding, allowing the model to interpret them correctly.
+                        Categorical variables such as <span class="font-semibold">Situation</span> (e.g. Open Play, Set Piece) and <span class="font-semibold">Shot Type</span> (e.g. Head, Right Foot) are converted to a numerical format using one-hot encoding so the model can interpret them correctly.
                     </p>
                 </div>
 
                 <div>
-                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 3: Building the Intelligence</h3>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 3: Training the Models</h3>
                     <p>
-                        With a fully preprocessed dataset, the next phase was to train the predictive models. This project uses <span class="font-semibold">Logistic Regression</span>, a robust and highly interpretable algorithm well-suited for binary classification tasks like predicting a goal (1) or no goal (0).
+                        With a preprocessed dataset in place, the next step is training the predictive models. This project uses <span class="font-semibold">Logistic Regression</span>, a robust and interpretable algorithm well-suited to binary classification tasks like predicting a goal (1) or no goal (0).
                     </p>
                     <p class="mt-2">
-                        Rather than a single, one-size-fits-all model, four distinct models were trained to provide more specialised predictions. The backend intelligently selects the best model based on the inputs you provide in the 'Controls' panel:
+                        Rather than a single general-purpose model, four distinct models are trained to provide more specialised predictions. The correct model is selected automatically based on the inputs provided in the Controls panel:
                     </p>
                     <ul class="list-disc list-inside mt-2 pl-4 space-y-1">
-                        <li><span class="font-semibold">Basic Model:</span> Uses only location-based features (coordinates, distance, and angle).</li>
-                        <li><span class="font-semibold">Situation Model:</span> Incorporates the game situation (e.g., Open Play, Penalty).</li>
-                        <li><span class="font-semibold">Shot Type Model:</span> Adds information about how the shot was taken (e.g., Head, Left Foot).</li>
-                        <li><span class="font-semibold">Advanced Model:</span> The most comprehensive model, using all available features for the most nuanced predictions.</li>
+                        <li><span class="font-semibold">Basic Model:</span> Uses only location-based features (coordinates, distance and angle).</li>
+                        <li><span class="font-semibold">Situation Model:</span> Adds the game situation (e.g. Open Play, Penalty).</li>
+                        <li><span class="font-semibold">Shot Type Model:</span> Adds information about how the shot was taken (e.g. Head, Left Foot).</li>
+                        <li><span class="font-semibold">Advanced Model:</span> The most comprehensive model, combining all available features for the most detailed predictions.</li>
                     </ul>
                     <p class="mt-2">
-                        Each model was trained and fine-tuned using `scikit-learn`, with hyperparameters optimised through randomised search and cross-validation to ensure robust performance.
+                        Each model is trained using <code class="bg-slate-200 rounded px-1 py-0.5 text-sm">scikit-learn</code>, with hyperparameters tuned through randomised search and cross-validation.
                     </p>
                 </div>
-                
+
                 <div>
-                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 4: Pre-calculating Heatmaps for Visualisation</h3>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 4: Pre-calculating Heatmaps</h3>
                     <p>
-                        To offer a richer understanding of the model's predictions, the 'Heatmaps' page visualises xG across the entire pitch. Calculating these values on-the-fly for every user request would be computationally expensive and slow. To solve this, a dedicated Python script (`generate_heatmaps.py`) runs as the final step in the data pipeline.
+                        The Heatmaps page visualises xG values across the entire pitch. Computing these on demand for every visitor would be slow and wasteful, so a dedicated script (<code class="bg-slate-200 rounded px-1 py-0.5 text-sm">generate_heatmaps.py</code>) runs as part of the data pipeline to pre-calculate them.
                     </p>
                     <p class="mt-2">
-                        This script iterates over a fine grid of coordinates covering the pitch and calculates the xG value at each point for every possible combination of game situation and shot type. The results are compiled into a single, optimised JSON file (`heatmaps.json`). When you select a filter on the Heatmaps page, the application simply fetches the corresponding pre-calculated grid, ensuring a fast and seamless experience.
+                        The script iterates over a fine grid of pitch coordinates and calculates the xG at each point for every combination of situation and shot type. The results are saved to a single JSON file. When a filter is selected on the Heatmaps page, the browser reads the relevant pre-calculated grid directly from that file with no server round-trip required.
                     </p>
                 </div>
 
                 <div>
-                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 5: Serving the Model with a Flask API</h3>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 5: Exporting Models to ONNX for the Browser</h3>
                     <p>
-                        With the models trained and heatmaps generated, they need to be made available to the frontend. This is handled by a lightweight backend server built using <span class="font-semibold">Flask</span>, a popular Python web framework. The Flask application (`app.py`) creates a REST API with two key endpoints:
+                        The trained <code class="bg-slate-200 rounded px-1 py-0.5 text-sm">scikit-learn</code> pipelines cannot run natively in a browser, so the final step of the data pipeline converts each one to the <span class="font-semibold">ONNX</span> (Open Neural Network Exchange) format using <code class="bg-slate-200 rounded px-1 py-0.5 text-sm">skl2onnx</code>. The resulting <code class="bg-slate-200 rounded px-1 py-0.5 text-sm">.onnx</code> files are written directly into the frontend directory alongside the heatmap JSON.
                     </p>
-                    <ul class="list-disc list-inside mt-2 pl-4 space-y-1">
-                        <li><code class="bg-slate-200 rounded px-1 py-0.5 text-sm">/redshaw-xg/api/predict</code>: This endpoint receives the shot details (coordinates, situation, etc.) from the interactive plotter, uses helper functions to determine the most appropriate model, preprocesses the inputs, and returns the live xG prediction.</li>
-                        <li><code class="bg-slate-200 rounded px-1 py-0.5 text-sm">/redshaw-xg/api/predict/grid</code>: This endpoint serves the pre-generated heatmap data from the `heatmaps.json` file, allowing the frontend to visualise the model's predictions quickly.</li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 6: Deployment to the Web</h3>
-                    <p>
-                        To bring this all together into a publicly accessible web application, the project is deployed across two services. The backend Flask API is hosted on <a href="https://render.com/" target="_blank" class="text-blue-600 hover:underline">Render</a>, a cloud platform designed for easily deploying and scaling web applications. The frontend (i.e. all the HTML, CSS, and JavaScript files you're interacting with right now) is served as a static site using <a href="https://pages.github.com/" target="_blank" class="text-blue-600 hover:underline">GitHub Pages</a>.
+                    <p class="mt-2">
+                        The site originally used a Python Flask API hosted on Render to serve predictions. Render's free tier spins down inactive instances after a period of inactivity, which meant every first visit triggered a cold start that could take upwards of 60 seconds before the page became usable. Migrating to in-browser inference via <span class="font-semibold">ONNX Runtime Web</span> eliminated that problem entirely. Predictions now run locally in the browser using the exported model files, with no server involved at all.
                     </p>
                 </div>
 
                 <div>
-                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 7: Explore the Code Yourself</h3>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 6: Deployment</h3>
                     <p>
-                        This entire project, from the data pipeline to the interactive frontend, is open-source. If you're interested in the technical details or just want to see the code, you can find the full repository on GitHub.
+                        Because all inference happens client-side, the entire application is served as a static site via <a href="https://pages.github.com/" target="_blank" class="text-blue-600 hover:underline">GitHub Pages</a>. There is no backend to maintain or host. The ONNX model files and heatmap data are committed to the repository as static assets and served directly to the browser alongside the HTML, CSS and JavaScript.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-2">Step 7: Explore the Code</h3>
+                    <p>
+                        The full project, from the data pipeline to the frontend, is open source. The repository includes the scraping scripts, feature engineering, model training, ONNX export pipeline and all frontend code.
                     </p>
                     <p class="mt-4 text-center">
                         <a href="https://github.com/ATRedshaw/Redshaw-xG" target="_blank" class="inline-block bg-slate-800 text-white font-bold py-3 px-6 rounded-lg hover:bg-slate-700 transition-colors duration-300 shadow-md">
