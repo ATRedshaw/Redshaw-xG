@@ -49,10 +49,19 @@ if [ $? -ne 0 ]; then
 fi
 
 # Run heatmap generation
-echo "\n=== Generating Heatmap Endpoint Data ==="
+echo "\n=== Generating Heatmap Data ==="
 python -m src.modelling.generate_heatmaps
 if [ $? -ne 0 ]; then
     echo "Error: Heatmap generation failed"
+    exit 1
+fi
+
+# Export trained models to ONNX and copy heatmaps.json to the frontend.
+# This replaces the Flask API — all inference now runs client-side in the browser.
+echo "\n=== Exporting Models to ONNX ==="
+python export_to_onnx.py
+if [ $? -ne 0 ]; then
+    echo "Error: ONNX model export failed"
     exit 1
 fi
 
