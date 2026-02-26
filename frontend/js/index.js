@@ -150,11 +150,6 @@ function setupCanvas() {
  * @param {MouseEvent} event - The click event.
  */
 function handleCanvasClick(event) {
-    if (!isBackendHealthy) {
-        alert('Backend server is not active. Please wait or click "Wake Server" to proceed.');
-        return;
-    }
-
     const rect = canvas.getBoundingClientRect();
     const pixelX = event.clientX - rect.left;
     const pixelY = event.clientY - rect.top;
@@ -183,7 +178,7 @@ function handleCanvasClick(event) {
 }
 
 /**
- * Calls the backend API to get an xG prediction for the given point.
+ * Runs client-side xG inference via ONNX Runtime Web for the given point.
  * @param {number} x - The X coordinate in meters.
  * @param {number} y - The Y coordinate in meters.
  */
@@ -191,34 +186,22 @@ async function callXGPrediction(x, y) {
     const situation = situationSelect.value || null;
     const shot_type = shotTypeSelect.value || null;
 
-    const fetchBody = {
-        x: x,
-        y: y,
-        situation: situation,
-        shot_type: shot_type,
-        normalisation: { is_normalised: false, max_pitch_width: 68, max_pitch_length: 105 }
-    };
-
     try {
-        const response = await fetch('https://redshaw-web-apps.onrender.com/redshaw-xg/api/predict', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(fetchBody)
-        });
-        const data = await response.json();
-
-        if (data.xG !== undefined) {
-            targetXG = data.xG;
-            xgAnimationStartTime = performance.now();
-            requestAnimationFrame(animateXG);
-        } else {
-            throw new Error(data.error || 'Unexpected response format');
-        }
+        const result = await XG_INFERENCE.predict(
+            x,
+            y,
+            situation,
+            shot_type,
+            { is_normalised: false, max_pitch_width: 68, max_pitch_length: 105 },
+        );
+        targetXG = result.xG;
+        xgAnimationStartTime = performance.now();
+        requestAnimationFrame(animateXG);
     } catch (err) {
         xgValue.textContent = 'Error';
-        console.error('Fetch error:', err);
-        currentXG = 0; // Reset currentXG on error
-        targetXG = 0; // Reset targetXG on error
+        console.error('Inference error:', err);
+        currentXG = 0;
+        targetXG = 0;
     }
 }
 
@@ -228,11 +211,6 @@ async function callXGPrediction(x, y) {
  * Otherwise, it just updates the prediction for the existing point.
  */
 function handleSituationChange() {
-    if (!isBackendHealthy) {
-        alert('Backend server is not active. Please wait or click "Wake Server" to proceed.');
-        return;
-    }
-
     if (situationSelect.value === 'Penalty') {
         // Automatically plot the point at the right penalty spot
         targetPoint = { x: PENALTY_SPOT_RIGHT_X, y: PENALTY_SPOT_Y };

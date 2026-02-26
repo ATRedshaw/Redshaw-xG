@@ -340,10 +340,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleCanvasClick(event) {
-        if (!isBackendHealthy) {
-            alert('Backend server is not active. Please wait or click "Wake Server" to proceed.');
-            return;
-        }
         if (!currentMatch) {
             alert('Please create or load a match before plotting shots.');
             return;
@@ -435,11 +431,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveNewMatch() {
-        if (!isBackendHealthy) {
-            alert('Backend server is not active. Please wait or click "Wake Server" to proceed.');
-            return;
-        }
-
         const homeTeamName = homeTeamNameInput.value;
         const awayTeamName = awayTeamNameInput.value;
         const matchDate = matchDateInput.value;
@@ -671,10 +662,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveShotChanges() {
-        if (!isBackendHealthy) {
-            alert('Backend server is not active. Please wait or click "Wake Server" to proceed.');
-            return;
-        }
         if (!selectedShot) return;
     
         const newSituation = editSituationSelect.value;
@@ -756,29 +743,26 @@ document.addEventListener('DOMContentLoaded', () => {
         request.onerror = (event) => console.error('Error deleting match:', event.target.errorCode);
     }
  
+    /**
+     * Runs client-side xG inference via ONNX Runtime Web.
+     * @param {number}      x         X-coordinate in meters (right-attacking orientation).
+     * @param {number}      y         Y-coordinate in meters.
+     * @param {string|null} situation Situation string or empty string.
+     * @param {string|null} shot_type Shot-type string or empty string.
+     * @returns {Promise<number|null>} The xG value, or null on error.
+     */
     async function callXGPrediction(x, y, situation, shot_type) {
-        const fetchBody = {
-            x: x,
-            y: y,
-            situation: situation,
-            shot_type: shot_type,
-            normalisation: { is_normalised: false, max_pitch_width: 68, max_pitch_length: 105 }
-        };
-
         try {
-            const response = await fetch('https://redshaw-web-apps.onrender.com/redshaw-xg/api/predict', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(fetchBody)
-            });
-            const data = await response.json();
-            if (data.xG !== undefined) {
-                return data.xG;
-            } else {
-                throw new Error(data.error || 'Unexpected response format');
-            }
+            const result = await XG_INFERENCE.predict(
+                x,
+                y,
+                situation,
+                shot_type,
+                { is_normalised: false, max_pitch_width: 68, max_pitch_length: 105 },
+            );
+            return result.xG;
         } catch (err) {
-            console.error('Fetch error:', err);
+            console.error('Inference error:', err);
             alert('Error getting xG prediction.');
             return null;
         }

@@ -33,11 +33,9 @@ const PENALTY_SPOT_DISTANCE = 11;
 
 // --- State and Configuration ---
 let scale; // Calculated dynamically based on container size
-let heatmapData = null; // Holds the fetched heatmap data
+let heatmapData = null; // Holds the active (filtered + scaled) heatmap data
+let rawHeatmapJson = null; // Full heatmaps.json loaded once at startup
 const LINE_COLOR = '#000080'; // Navy blue for pitch lines
-
-// --- Backend Health State ---
-let isBackendHealthy = false;
 
 // --- Color Mapping for Heatmap ---
 // Defines the color gradient for xG values from 0.0 to 1.0.
@@ -287,44 +285,54 @@ function hideStatus() {
 }
 
 /**
- * Fetches heatmap data from the backend API based on selected filters.
+ * Fetches and caches the full heatmaps.json from the local data directory,
+ * then applies the current situation/shot-type filter and updates the canvas.
+ * Safe to call multiple times — the JSON is only fetched once.
  */
 async function loadHeatmapData() {
     const situation = situationSelect.value || null;
-    const shotType = shotTypeSelect.value || null;
-    
-    if (!isBackendHealthy) {
-        alert('Backend server is not active. Please wait or click "Wake Server" to proceed.');
-        return;
-    }
+    const shotType  = shotTypeSelect.value  || null;
 
     loadButton.disabled = true;
     showStatus('Loading heatmap data...', 'loading');
 
     try {
-        const params = new URLSearchParams();
-        if (situation) params.append('situation', situation);
-        if (shotType) params.append('shot_type', shotType);
-        params.append('max_length', PITCH_LENGTH_METERS.toString());
-        params.append('max_width', PITCH_WIDTH_METERS.toString());
-
-        // IMPORTANT: Replace with your actual backend API endpoint
-        const response = await fetch(`https://redshaw-web-apps.onrender.com/redshaw-xg/api/predict/grid?${params}`);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
+        // Fetch the full JSON exactly once; subsequent calls reuse the cache.
+        if (!rawHeatmapJson) {
+            const response = await fetch('data/heatmaps.json');
+            if (!response.ok) {
+                throw new Error(`Failed to load heatmaps.json — HTTP ${response.status}`);
+            }
+            rawHeatmapJson = await response.json();
         }
-        
-        heatmapData = await response.json();
-        
+
+        // Convert empty strings to the 'None' key used in the JSON structure.
+        const situationKey = situation ?? 'None';
+        const shotTypeKey  = shotType  ?? 'None';
+
+        const rawHeatmap = rawHeatmapJson.heatmaps[situationKey]?.[shotTypeKey];
+        if (!rawHeatmap) {
+            throw new TypeError(`No data for situation='${situationKey}', shot_type='${shotTypeKey}'.`);
+        }
+
+        // Scale normalised coordinates (0–1) to pitch metres so drawHeatmap
+        // can compare them directly against the canvas metre-space coordinates.
+        heatmapData = {
+            grid_definition: {
+                x_coords: rawHeatmapJson.grid_definition.x_coords.map(v => v * PITCH_LENGTH_METERS),
+                y_coords: rawHeatmapJson.grid_definition.y_coords.map(v => v * PITCH_WIDTH_METERS),
+            },
+            heatmap: rawHeatmap,
+        };
+
         drawComplete();
         hideStatus();
-        
+
     } catch (error) {
         console.error('Error loading heatmap:', error);
-        heatmapData = null; // Clear old data on error
-        drawComplete(); // Redraw pitch without heatmap
-        showStatus('Failed to load data. Please check the backend connection.', 'error');
+        heatmapData = null;
+        drawComplete();
+        showStatus(`Failed to load data: ${error.message}`, 'error');
     } finally {
         loadButton.disabled = false;
     }
@@ -343,9 +351,7 @@ function enablePageInteractions() {
     loadButton.disabled = false;
     situationSelect.disabled = false;
     shotTypeSelect.disabled = false;
-    isBackendHealthy = true;
-    console.log('Heatmap page interactions enabled.');
-    loadHeatmapData(); // Load heatmap once backend is healthy
+    loadHeatmapData(); // Load default heatmap on initialisation.
 }
 
 // Function to disable all interactive elements
@@ -353,8 +359,6 @@ function disablePageInteractions() {
     loadButton.disabled = true;
     situationSelect.disabled = true;
     shotTypeSelect.disabled = true;
-    isBackendHealthy = false;
-    console.log('Heatmap page interactions disabled.');
 }
 
 // Initial setup when the DOM is fully loaded

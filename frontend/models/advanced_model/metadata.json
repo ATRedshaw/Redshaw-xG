@@ -1,0 +1,42 @@
+{
+    "model_name": "advanced_model",
+    "model_type": "Logistic Regression",
+    "brier_score": 0.07842072044795786,
+    "best_parameters": {
+        "logreg__C": 0.014272548556901481,
+        "logreg__penalty": "l1",
+        "logreg__solver": "saga"
+    },
+    "features": [
+        "X",
+        "Y",
+        "distance_to_goal",
+        "angle_to_goal",
+        "situation_DirectFreekick",
+        "situation_FromCorner",
+        "situation_OpenPlay",
+        "situation_Penalty",
+        "situation_SetPiece",
+        "shotType_Head",
+        "shotType_LeftFoot",
+        "shotType_OtherBodyPart",
+        "shotType_RightFoot",
+        "interaction_DirectFreekick_LeftFoot",
+        "interaction_DirectFreekick_RightFoot",
+        "interaction_FromCorner_Head",
+        "interaction_FromCorner_LeftFoot",
+        "interaction_FromCorner_OtherBodyPart",
+        "interaction_FromCorner_RightFoot",
+        "interaction_OpenPlay_Head",
+        "interaction_OpenPlay_LeftFoot",
+        "interaction_OpenPlay_OtherBodyPart",
+        "interaction_OpenPlay_RightFoot",
+        "interaction_Penalty_LeftFoot",
+        "interaction_Penalty_RightFoot",
+        "interaction_SetPiece_Head",
+        "interaction_SetPiece_LeftFoot",
+        "interaction_SetPiece_OtherBodyPart",
+        "interaction_SetPiece_RightFoot"
+    ],
+    "test_set_size": 41223
+}
