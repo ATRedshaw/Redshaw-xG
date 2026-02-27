@@ -97,10 +97,6 @@ document.addEventListener('DOMContentLoaded', () => {
             db = event.target.result;
             console.log('Database initialised');
             loadMatchesIntoModal();
-            setupEventListeners();
-            setupCanvas();
-            // Initial state: disable interactions until backend is healthy
-            disablePageInteractions();
         };
 
         request.onupgradeneeded = (event) => {
@@ -776,5 +772,12 @@ document.addEventListener('DOMContentLoaded', () => {
     shotTypeSelect.value = '';
     updateTeamLabels('Home Team', 'Away Team');
     updateMatchTitleDisplay();
-    // The initial call to disablePageInteractions is now handled within initDB's onsuccess.
+
+    // setupCanvas and setupEventListeners must be called synchronously here so that
+    // the 'backendHealthy' listener is registered before health_check.js dispatches
+    // the event (also on DOMContentLoaded). IndexedDB's onsuccess is async and would
+    // miss the event if these were registered there.
+    setupCanvas();
+    setupEventListeners();
+    disablePageInteractions();
 });
