@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const PENALTY_AREA_WIDTH = 40.32;
     const CENTER_CIRCLE_RADIUS = 9.15;
     const PENALTY_SPOT_DISTANCE = 11;
+    const CORNER_ARC_RADIUS = 1;
 
     // --- STATE & CONFIGURATION ---
     let scale;
@@ -179,6 +180,12 @@ document.addEventListener('DOMContentLoaded', () => {
         drawCircle(rightPenaltySpotX, PITCH_WIDTH_METERS / 2, 0.3, true);
         const rightArcAngle = Math.acos((rightPenaltySpotX - (PITCH_LENGTH_METERS - PENALTY_AREA_LENGTH)) / CENTER_CIRCLE_RADIUS);
         drawCircle(rightPenaltySpotX, PITCH_WIDTH_METERS / 2, CENTER_CIRCLE_RADIUS, false, Math.PI - rightArcAngle, Math.PI + rightArcAngle);
+
+        // Corner arcs (FIFA Law 1: 1m radius quarter circle inside the field at each corner)
+        drawCircle(0, 0, CORNER_ARC_RADIUS, false, -Math.PI / 2, 0);
+        drawCircle(0, PITCH_WIDTH_METERS, CORNER_ARC_RADIUS, false, 0, Math.PI / 2);
+        drawCircle(PITCH_LENGTH_METERS, 0, CORNER_ARC_RADIUS, false, Math.PI, 3 * Math.PI / 2);
+        drawCircle(PITCH_LENGTH_METERS, PITCH_WIDTH_METERS, CORNER_ARC_RADIUS, false, Math.PI / 2, Math.PI);
 
         drawShots();
     }
