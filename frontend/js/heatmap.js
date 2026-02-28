@@ -37,8 +37,17 @@ let heatmapData = null; // Holds the active (filtered + scaled) heatmap data
 let rawHeatmapJson = null; // Full heatmaps.json loaded once at startup
 const LINE_COLOR = '#000080'; // Navy blue for pitch lines
 
+// --- View Mode State ---
+// Half-pitch view is used on small screens (< 768 px) to maximise the
+// visible attacking area. Full pitch is used on larger screens.
+const HALF_PITCH_BREAKPOINT_PX = 768;
+
+/** Returns true when the viewport is narrow enough to warrant the half-pitch view. */
+function isHalfPitch() {
+    return window.innerWidth < HALF_PITCH_BREAKPOINT_PX;
+}
+
 // --- Color Mapping for Heatmap ---
-// Defines the color gradient for xG values from 0.0 to 1.0.
 // Returns an RGBA object for efficient drawing with ImageData.
 const colorStops = [
     { value: 0.0,  color: { r: 255, g: 255, b: 255, a: 0 } },   // Transparent
@@ -88,11 +97,19 @@ function getHeatmapColorRGBA(xgValue) {
 
 /**
  * Converts coordinates from meters to canvas pixels.
+ * In half-pitch mode a 90° CCW rotation is applied: the attacking goal
+ * (x = 105 m) appears at the top, and pitch width maps to the horizontal axis.
  * @param {number} metersX - X coordinate in meters.
  * @param {number} metersY - Y coordinate in meters.
  * @returns {{x: number, y: number}} Pixel coordinates.
  */
 function metersToPixels(metersX, metersY) {
+    if (isHalfPitch()) {
+        // 90° CCW: pitch Y-axis → canvas X (inverted), pitch X-axis → canvas Y (inverted).
+        const px = (PITCH_WIDTH_METERS - metersY + PADDING_METERS) * scale;
+        const py = (PITCH_LENGTH_METERS - metersX + PADDING_METERS) * scale;
+        return { x: px, y: py };
+    }
     const px = (metersX + PADDING_METERS) * scale;
     const py = (PITCH_WIDTH_METERS - metersY + PADDING_METERS) * scale;
     return { x: px, y: py };
@@ -110,8 +127,11 @@ function drawLine(x1m, y1m, x2m, y2m) {
 function drawCircle(x_m, y_m, radius_m, fill = false, startAngle = 0, endAngle = 2 * Math.PI, anticlockwise = false) {
     const p = metersToPixels(x_m, y_m);
     const radius_px = radius_m * scale;
+    // Arc angles are shifted by -π/2 to match the 90° CCW coordinate rotation.
+    const arcStart = isHalfPitch() ? startAngle - Math.PI / 2 : startAngle;
+    const arcEnd   = isHalfPitch() ? endAngle   - Math.PI / 2 : endAngle;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, radius_px, startAngle, endAngle, anticlockwise);
+    ctx.arc(p.x, p.y, radius_px, arcStart, arcEnd, anticlockwise);
     if (fill) ctx.fill(); else ctx.stroke();
 }
 
@@ -191,8 +211,15 @@ function drawHeatmap() {
 
     for (let py = 0; py < canvas.height; py++) {
         for (let px = 0; px < canvas.width; px++) {
-            const meterX = (px / scale) - PADDING_METERS;
-            const meterY = PITCH_WIDTH_METERS + PADDING_METERS - (py / scale);
+            // Invert metersToPixels to recover pitch coordinates for this pixel.
+            let meterX, meterY;
+            if (isHalfPitch()) {
+                meterX = PITCH_LENGTH_METERS + PADDING_METERS - py / scale;
+                meterY = PITCH_WIDTH_METERS  + PADDING_METERS - px / scale;
+            } else {
+                meterX = (px / scale) - PADDING_METERS;
+                meterY = PITCH_WIDTH_METERS + PADDING_METERS - (py / scale);
+            }
 
             if (meterX >= 0 && meterX <= PITCH_LENGTH_METERS && meterY >= 0 && meterY <= PITCH_WIDTH_METERS) {
                 const xIndex = Math.floor(meterX / cellWidth);
@@ -250,12 +277,21 @@ function drawComplete() {
 
 /**
  * Sets up the canvas dimensions based on its container size and redraws.
+ * In half-pitch mode the view is rotated 90° CCW (goal at top): the pitch
+ * width (68 m) is the horizontal axis and the attacking half-length (52.5 m)
+ * is the vertical axis, giving a naturally proportioned portrait-ish canvas.
  */
 function setupCanvas() {
     const containerWidth = pitchContainer.clientWidth;
     canvas.width = containerWidth;
-    canvas.height = containerWidth / ASPECT_RATIO;
-    scale = canvas.width / TOTAL_WIDTH_METERS;
+    if (isHalfPitch()) {
+        // Horizontal extent = pitch width + 2 × padding = 74 m.
+        scale = canvas.width / (PITCH_WIDTH_METERS + 2 * PADDING_METERS);
+        canvas.height = (PITCH_LENGTH_METERS / 2 + 2 * PADDING_METERS) * scale;
+    } else {
+        scale = canvas.width / TOTAL_WIDTH_METERS;
+        canvas.height = canvas.width / ASPECT_RATIO;
+    }
     drawComplete();
 }
 

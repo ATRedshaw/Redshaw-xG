@@ -47,16 +47,33 @@ const XG_ANIMATION_DURATION_MS = 300; // milliseconds for xG animation
 // --- Backend Health State ---
 let isBackendHealthy = false;
 
+// --- View Mode State ---
+// Half-pitch view is used on small screens (< 768 px) to maximise the
+// visible attacking area. Full pitch is used on larger screens.
+const HALF_PITCH_BREAKPOINT_PX = 768;
+
+/** Returns true when the viewport is narrow enough to warrant the half-pitch view. */
+function isHalfPitch() {
+    return window.innerWidth < HALF_PITCH_BREAKPOINT_PX;
+}
+
 /**
  * Converts meter-based coordinates to canvas pixel coordinates.
- * The X-axis is offset by padding. The Y-axis is inverted and offset.
+ * In half-pitch mode a 90° CCW rotation is applied: the attacking goal
+ * (x = 105 m) appears at the top, and pitch width maps to the horizontal axis.
  * @param {number} metersX - The X coordinate in meters.
  * @param {number} metersY - The Y coordinate in meters.
  * @returns {{x: number, y: number}} - The pixel coordinates.
  */
 function metersToPixels(metersX, metersY) {
+    if (isHalfPitch()) {
+        // 90° CCW: pitch Y-axis → canvas X (inverted), pitch X-axis → canvas Y (inverted).
+        const px = (PITCH_WIDTH_METERS - metersY + PADDING_METERS) * scale;
+        const py = (PITCH_LENGTH_METERS - metersX + PADDING_METERS) * scale;
+        return { x: px, y: py };
+    }
     const px = (metersX + PADDING_METERS) * scale;
-    const py = (PITCH_WIDTH_METERS - metersY + PADDING_METERS) * scale; // Y is inverted and padded
+    const py = (PITCH_WIDTH_METERS - metersY + PADDING_METERS) * scale;
     return { x: px, y: py };
 }
 
@@ -72,8 +89,11 @@ function drawLine(x1m, y1m, x2m, y2m) {
 function drawCircle(x_m, y_m, radius_m, fill = false, startAngle = 0, endAngle = 2 * Math.PI, anticlockwise = false) {
     const p = metersToPixels(x_m, y_m);
     const radius_px = radius_m * scale;
+    // Arc angles are shifted by -π/2 to match the 90° CCW coordinate rotation.
+    const arcStart = isHalfPitch() ? startAngle - Math.PI / 2 : startAngle;
+    const arcEnd   = isHalfPitch() ? endAngle   - Math.PI / 2 : endAngle;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, radius_px, startAngle, endAngle, anticlockwise);
+    ctx.arc(p.x, p.y, radius_px, arcStart, arcEnd, anticlockwise);
     if (fill) ctx.fill(); else ctx.stroke();
 }
 
@@ -143,12 +163,21 @@ function drawPitch() {
 
 /**
  * Sets up the canvas dimensions and scale based on its container size.
+ * In half-pitch mode the view is rotated 90° CCW (goal at top): the pitch
+ * width (68 m) is the horizontal axis and the attacking half-length (52.5 m)
+ * is the vertical axis, giving a naturally proportioned portrait-ish canvas.
  */
 function setupCanvas() {
     const containerWidth = pitchContainer.clientWidth;
     canvas.width = containerWidth;
-    canvas.height = containerWidth / ASPECT_RATIO;
-    scale = canvas.width / TOTAL_WIDTH_METERS; // Calculate scale based on total width including padding
+    if (isHalfPitch()) {
+        // Horizontal extent = pitch width + 2 × padding = 74 m.
+        scale = canvas.width / (PITCH_WIDTH_METERS + 2 * PADDING_METERS);
+        canvas.height = (PITCH_LENGTH_METERS / 2 + 2 * PADDING_METERS) * scale;
+    } else {
+        scale = canvas.width / TOTAL_WIDTH_METERS;
+        canvas.height = canvas.width / ASPECT_RATIO;
+    }
     drawPitch();
 }
 
@@ -161,9 +190,16 @@ function handleCanvasClick(event) {
     const pixelX = event.clientX - rect.left;
     const pixelY = event.clientY - rect.top;
 
-    // Convert pixel coordinates to meter coordinates
-    const metersX = (pixelX / scale) - PADDING_METERS;
-    const metersY = PITCH_WIDTH_METERS + PADDING_METERS - (pixelY / scale);
+    // Invert metersToPixels for the active view mode.
+    let metersX, metersY;
+    if (isHalfPitch()) {
+        // Inverse of the 90° CCW rotation: py → metersX, px → metersY.
+        metersX = PITCH_LENGTH_METERS + PADDING_METERS - pixelY / scale;
+        metersY = PITCH_WIDTH_METERS  + PADDING_METERS - pixelX / scale;
+    } else {
+        metersX = (pixelX / scale) - PADDING_METERS;
+        metersY = PITCH_WIDTH_METERS + PADDING_METERS - (pixelY / scale);
+    }
 
     // If current situation is Penalty, check if click is away from the spot
     if (situationSelect.value === 'Penalty') {
@@ -175,8 +211,10 @@ function handleCanvasClick(event) {
         }
     }
 
-    // Constrain the point to be within the field of play
-    if (metersX >= 0 && metersX <= PITCH_LENGTH_METERS && metersY >= 0 && metersY <= PITCH_WIDTH_METERS) {
+    // Constrain the point to be within the visible field of play.
+    // In half-pitch mode, only the attacking half (x >= 52.5 m) is interactive.
+    const minValidX = isHalfPitch() ? PITCH_LENGTH_METERS / 2 : 0;
+    if (metersX >= minValidX && metersX <= PITCH_LENGTH_METERS && metersY >= 0 && metersY <= PITCH_WIDTH_METERS) {
         targetPoint = { x: metersX, y: metersY };
         animationStartTime = performance.now();
         requestAnimationFrame(animateDot);
