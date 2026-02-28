@@ -7,7 +7,6 @@ const canvas = document.getElementById('football-pitch');
 const ctx = canvas.getContext('2d');
 const pitchContainer = document.getElementById('pitch-container');
 const statusDiv = document.getElementById('status');
-const loadButton = document.getElementById('load-heatmap');
 const situationSelect = document.getElementById('situation-select');
 const shotTypeSelect = document.getElementById('shot-type-select');
 
@@ -293,7 +292,6 @@ async function loadHeatmapData() {
     const situation = situationSelect.value || null;
     const shotType  = shotTypeSelect.value  || null;
 
-    loadButton.disabled = true;
     showStatus('Loading heatmap data...', 'loading');
 
     try {
@@ -333,8 +331,6 @@ async function loadHeatmapData() {
         heatmapData = null;
         drawComplete();
         showStatus(`Failed to load data: ${error.message}`, 'error');
-    } finally {
-        loadButton.disabled = false;
     }
 }
 
@@ -343,12 +339,12 @@ async function loadHeatmapData() {
 // Redraw canvas on window resize to maintain proportions
 window.addEventListener('resize', setupCanvas);
 
-// Load data when the button is clicked
-loadButton.addEventListener('click', loadHeatmapData);
+// Reload heatmap automatically whenever a filter changes
+situationSelect.addEventListener('change', loadHeatmapData);
+shotTypeSelect.addEventListener('change', loadHeatmapData);
 
 // Function to enable all interactive elements
 function enablePageInteractions() {
-    loadButton.disabled = false;
     situationSelect.disabled = false;
     shotTypeSelect.disabled = false;
     loadHeatmapData(); // Load default heatmap on initialisation.
@@ -356,7 +352,6 @@ function enablePageInteractions() {
 
 // Function to disable all interactive elements
 function disablePageInteractions() {
-    loadButton.disabled = true;
     situationSelect.disabled = true;
     shotTypeSelect.disabled = true;
 }
