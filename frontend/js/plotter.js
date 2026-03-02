@@ -645,8 +645,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedShot && selectedShot.index === index) {
             // Deselect if clicking the same shot again
             selectedShot = null;
+            situationSelect.value = '';
+            shotTypeSelect.value = '';
+            shotTypeSelect.disabled = false;
         } else {
             selectedShot = { ...currentMatch.shots[index], index: index };
+            // Sync the controls panel to reflect the selected shot's attributes
+            situationSelect.value = selectedShot.situation || '';
+            shotTypeSelect.value = selectedShot.shotType || '';
+            shotTypeSelect.disabled = selectedShot.situation === 'Penalty';
         }
         updateXgDisplay();
         updateShotLists();
@@ -746,6 +753,64 @@ document.addEventListener('DOMContentLoaded', () => {
         request.onerror = (event) => console.error('Error deleting match:', event.target.errorCode);
     }
  
+    /**
+     * Handles changes to the situation or shot-type dropdowns in the controls panel.
+     * Disables the shot-type selector for Penalty. If a shot is currently selected,
+     * immediately re-calculates its xG with the updated attributes.
+     */
+    function handleSituationChange() {
+        if (situationSelect.value === 'Penalty') {
+            shotTypeSelect.disabled = true;
+            shotTypeSelect.value = '';
+        } else {
+            shotTypeSelect.disabled = false;
+        }
+
+        if (!selectedShot || !currentMatch) return;
+
+        const newSituation = situationSelect.value;
+        const newShotType = shotTypeSelect.value;
+
+        const shot = currentMatch.shots[selectedShot.index];
+        const attackingLeft = (shot.team === 'home' && currentMatch.homeAttacking === 'left') ||
+                              (shot.team === 'away' && currentMatch.awayAttacking === 'left');
+
+        let metersX = shot.x;
+        let metersY = shot.y;
+
+        if (newSituation === 'Penalty') {
+            metersX = attackingLeft ? PENALTY_SPOT_DISTANCE : PITCH_LENGTH_METERS - PENALTY_SPOT_DISTANCE;
+            metersY = PITCH_WIDTH_METERS / 2;
+        }
+
+        let apiX = metersX;
+        if (attackingLeft) {
+            apiX = PITCH_LENGTH_METERS - metersX;
+        }
+
+        callXGPrediction(apiX, metersY, newSituation, newShotType).then(xg => {
+            if (xg === null) return;
+
+            const shotToUpdate = currentMatch.shots[selectedShot.index];
+            shotToUpdate.situation = newSituation;
+            shotToUpdate.shotType = newShotType;
+            shotToUpdate.x = metersX;
+            shotToUpdate.y = metersY;
+            shotToUpdate.xg = xg;
+
+            selectedShot.situation = newSituation;
+            selectedShot.shotType = newShotType;
+            selectedShot.x = metersX;
+            selectedShot.y = metersY;
+            selectedShot.xg = xg;
+
+            updateMatchInDB();
+            drawPitch();
+            updateXgDisplay();
+            updateShotLists();
+        });
+    }
+
     /**
      * Runs client-side xG inference via ONNX Runtime Web.
      * @param {number}      x         X-coordinate in meters (right-attacking orientation).
