@@ -1,0 +1,5 @@
+model,model_type,n_features,brier_score,best_C,best_penalty,best_solver,test_set_size
+basic_model,Logistic Regression,4,0.086089,0.000967425084403476,l1,liblinear,106021
+situation_model,Logistic Regression,9,0.079859,0.005039387655561005,l1,liblinear,106021
+shottype_model,Logistic Regression,8,0.08287,0.0016216144868955995,l1,saga,106021
+advanced_model,Logistic Regression,30,0.078497,0.005039387655561005,l1,liblinear,106021

@@ -1,0 +1,5 @@
+model_name,ece,mce,ace
+basic_model,0.011078,0.216890,0.066027
+situation_model,0.003632,0.108676,0.028891
+shottype_model,0.011541,0.090641,0.042591
+advanced_model,0.006168,0.070912,0.028732
