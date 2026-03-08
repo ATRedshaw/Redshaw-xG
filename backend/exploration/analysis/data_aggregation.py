@@ -73,6 +73,24 @@ def build_goal_volume_pivot(df: pd.DataFrame) -> pd.DataFrame:
     return pivot
 
 
+def _add_totals(pivot: pd.DataFrame) -> pd.DataFrame:
+    """
+    Appends a 'Total' column (row sums) and a 'Total' row (column sums)
+    to a league x season pivot table.
+
+    Args:
+        pivot: The source pivot DataFrame.
+
+    Returns:
+        A new DataFrame with the extra totals row and column appended.
+    """
+    out = pivot.copy()
+    out["Total"] = out.sum(axis=1)
+    totals_row = out.sum(axis=0)
+    totals_row.name = "Total"
+    return pd.concat([out, totals_row.to_frame().T])
+
+
 def plot_shot_volume_heatmap(
     pivot_shots: pd.DataFrame,
     pivot_goals: pd.DataFrame,
@@ -80,7 +98,8 @@ def plot_shot_volume_heatmap(
 ) -> None:
     """
     Renders a colour-coded heatmap of shot volumes (leagues x seasons) with
-    goal counts annotated as secondary text within each cell.
+    goal counts annotated as secondary text within each cell.  A 'Total'
+    column and row are appended to show aggregate volumes.
 
     Args:
         pivot_shots: League x season pivot of shot counts.
@@ -89,54 +108,83 @@ def plot_shot_volume_heatmap(
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    fig, ax = plt.subplots(figsize=(18, 5))
+    # Add totals before rendering
+    shots_with_totals = _add_totals(pivot_shots)
+    goals_with_totals = _add_totals(pivot_goals)
+
+    n_rows, n_cols = shots_with_totals.shape
+    fig, ax = plt.subplots(figsize=(n_cols * 1.25, max(5, n_rows * 0.95)))
+
+    # Colour only the inner cells (excluding the totals row/column).
+    # The totals are shown in a neutral grey so they don't distort the colour scale.
+    colour_data = shots_with_totals.copy().astype(float)
+    colour_data.iloc[-1, :] = np.nan   # Totals row — uncoloured
+    colour_data.iloc[:, -1] = np.nan   # Totals column — uncoloured
 
     sns.heatmap(
-        pivot_shots,
+        colour_data,
         ax=ax,
         cmap="YlOrRd",
         linewidths=0.4,
         linecolor="#dddddd",
         annot=False,
         cbar_kws={"label": "Shots per Season", "shrink": 0.8},
+        mask=colour_data.isna(),
     )
 
-    max_shots = pivot_shots.values.max()
+    # Fill totals cells with a neutral grey background manually
+    for col_i in range(n_cols):
+        ax.add_patch(
+            plt.Rectangle(
+                (col_i, n_rows - 1), 1, 1,
+                color="#cccccc", zorder=1,
+            )
+        )
+    for row_i in range(n_rows):
+        ax.add_patch(
+            plt.Rectangle(
+                (n_cols - 1, row_i), 1, 1,
+                color="#cccccc", zorder=1,
+            )
+        )
+    # Corner cell (Total/Total) slightly darker
+    ax.add_patch(
+        plt.Rectangle((n_cols - 1, n_rows - 1), 1, 1, color="#aaaaaa", zorder=1)
+    )
 
-    for row_i, row_label in enumerate(pivot_shots.index):
-        for col_i in range(len(pivot_shots.columns)):
-            shots = int(pivot_shots.iloc[row_i, col_i])
-            goals = int(pivot_goals.iloc[row_i, col_i])
-            text_colour = "white" if shots > max_shots * 0.65 else "black"
+    max_shots = int(pivot_shots.values.max())
 
-            # Shot count on upper portion of cell
+    for row_i in range(n_rows):
+        for col_i in range(n_cols):
+            shots = int(shots_with_totals.iloc[row_i, col_i])
+            goals = int(goals_with_totals.iloc[row_i, col_i])
+
+            is_total = (row_i == n_rows - 1) or (col_i == n_cols - 1)
+            text_colour = "#222" if is_total else (
+                "white" if shots > max_shots * 0.65 else "black"
+            )
+            fw = "bold"
+
             ax.text(
                 col_i + 0.5,
                 row_i + 0.38,
                 f"{shots:,}",
-                ha="center",
-                va="center",
-                fontsize=7,
-                fontweight="bold",
-                color=text_colour,
+                ha="center", va="center",
+                fontsize=7, fontweight=fw,
+                color=text_colour, zorder=5,
             )
-            # Goal count on lower portion of cell
             ax.text(
                 col_i + 0.5,
-                row_i + 0.68,
+                row_i + 0.70,
                 f"({goals:,}G)",
-                ha="center",
-                va="center",
-                fontsize=6,
-                color=text_colour,
+                ha="center", va="center",
+                fontsize=5.5, color=text_colour, zorder=5,
             )
 
     ax.set_title(
         "Shot & Goal Volume by League and Season  ·  2014–2025\n"
-        "Cell format: shots   (goals in parentheses)",
-        fontsize=12,
-        fontweight="bold",
-        pad=14,
+        "Cell format: shots   (goals in parentheses)   ·   'Total' column/row shows aggregates",
+        fontsize=12, fontweight="bold", pad=14,
     )
     ax.set_xlabel("Season", fontsize=11)
     ax.set_ylabel("")

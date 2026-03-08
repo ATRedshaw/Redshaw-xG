@@ -30,9 +30,7 @@ _MODEL_LABELS = {
 # Seaborn colorblind palette colours
 _COLOURS = ["#4C72B0", "#55A868", "#DD8452", "#C44E52"]
 
-# Naïve baseline: constant predictor set to marginal goal rate.
-# At ~10.5 % goal rate: Brier = p(1-p) = 0.105 * 0.895 ≈ 0.094
-_NAIVE_BRIER = 0.094
+
 
 
 # --- Data loading ----------------------------------------------------------
@@ -95,43 +93,29 @@ def plot_brier_score_comparison(metadata_list: list[dict], output_dir: Path) -> 
     for bar, score in zip(bars, scores):
         ax.text(
             bar.get_x() + bar.get_width() / 2,
-            score + 0.0003,
+            score + 0.00015,
             f"{score:.4f}",
             ha="center",
             va="bottom",
-            fontsize=10,
+            fontsize=11,
             fontweight="bold",
         )
 
-    # Incremental improvement arrows between adjacent bars
-    for i in range(1, len(scores)):
-        delta = scores[i - 1] - scores[i]
-        if delta > 0:
-            mid_x = i - 0.5
-            ax.annotate(
-                f"−{delta:.4f}",
-                xy=(mid_x, scores[i] + 0.0005),
-                fontsize=8,
-                ha="center",
-                color="#444",
-                style="italic",
-            )
-
-    # Naïve baseline reference line
-    ax.axhline(
-        _NAIVE_BRIER,
-        color="#d62728",
-        linestyle="--",
-        linewidth=1.5,
-        label=f"Naïve baseline  ({_NAIVE_BRIER:.3f})",
-        zorder=2,
+    y_min = min(scores) * 0.997
+    y_max = max(scores) * 1.005
+    ax.set_ylim(y_min, y_max)
+    ax.set_ylabel("Brier Score", fontsize=11)
+    ax.set_title(
+        "Model Performance — Brier Score",
+        fontsize=13, fontweight="bold", pad=12,
     )
-
-    ax.set_ylim(0.075, 0.098)
-    ax.set_ylabel("Brier Score  (lower is better)", fontsize=11)
-    ax.set_title("Model Performance Comparison — Brier Score", fontsize=13,
-                 fontweight="bold", pad=12)
-    ax.legend(fontsize=10)
+    ax.text(
+        0.5, -0.13,
+        "Brier Score measures the mean squared error between predicted probability "
+        "and actual outcome (0 = goal, 1 = goal).  Lower is better.",
+        transform=ax.transAxes,
+        fontsize=9, ha="center", color="#555", style="italic",
+    )
     ax.grid(axis="y", linestyle="--", alpha=0.5, zorder=1)
     ax.set_axisbelow(True)
 
@@ -185,23 +169,22 @@ def plot_brier_vs_feature_count(metadata_list: list[dict], output_dir: Path) -> 
             fontweight="bold",
         )
 
-    # Naïve baseline
-    ax.axhline(
-        _NAIVE_BRIER,
-        color="#d62728",
-        linestyle="--",
-        linewidth=1.2,
-        label=f"Naïve baseline  ({_NAIVE_BRIER:.3f})",
-        zorder=3,
-    )
-
     ax.set_xlabel("Number of Features", fontsize=11)
     ax.set_ylabel("Brier Score  (lower is better)", fontsize=11)
     ax.set_title(
         "Feature Set Complexity vs. Model Performance",
         fontsize=13, fontweight="bold", pad=12,
     )
-    ax.legend(fontsize=10)
+    ax.text(
+        0.5, -0.13,
+        "Each point is one trained model.  The curve illustrates diminishing returns "
+        "as more features are added to the logistic regression.",
+        transform=ax.transAxes,
+        fontsize=9, ha="center", color="#555", style="italic",
+    )
+    y_vals = [s for s in scores]
+    y_pad = (max(y_vals) - min(y_vals)) * 0.3
+    ax.set_ylim(min(y_vals) - y_pad, max(y_vals) + y_pad)
     ax.grid(linestyle="--", alpha=0.5)
     ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
 

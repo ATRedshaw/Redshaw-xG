@@ -24,6 +24,11 @@ _GOAL_POSTS = [(1.0, 0.45), (1.0, 0.55)]
 _PITCH_LENGTH = 105.0
 _PITCH_WIDTH = 68.0
 
+# Aspect ratio of a real pitch (width / height in data units, mapping normalised
+# x-span to y-span).  With normalised coords both axes run 0→1, so we scale the
+# figure so that 1 data-unit on x equals 105 m and 1 data-unit on y equals 68 m.
+_ASPECT_RATIO = _PITCH_LENGTH / _PITCH_WIDTH  # ≈ 1.544
+
 
 # --- Pitch drawing helper --------------------------------------------------
 
@@ -37,6 +42,10 @@ def _draw_pitch(
     coordinates. The attacking direction is left-to-right; the goal
     relevant to the xG models sits at x = 1.0.
 
+    Circles and arcs are drawn as Ellipses whose x/y radii are scaled by
+    the inverse aspect ratio so they appear circular at the 105:68 figure
+    proportions.
+
     Args:
         ax: Matplotlib Axes on which the pitch is drawn.
         pitch_colour: Background fill colour for the playing surface.
@@ -45,9 +54,17 @@ def _draw_pitch(
     ax.set_facecolor(pitch_colour)
     ax.set_xlim(-0.025, 1.025)
     ax.set_ylim(-0.025, 1.025)
-    ax.set_aspect("equal")
+    # No set_aspect — proportions are enforced via figsize instead.
 
     lw = 1.5
+
+    # x-radius and y-radius of a circle with real-world radius r_m metres,
+    # expressed in normalised coordinate units at the correct aspect ratio.
+    def _rx(r_m: float) -> float:
+        return r_m / _PITCH_LENGTH
+
+    def _ry(r_m: float) -> float:
+        return r_m / _PITCH_WIDTH
 
     # Outer boundary
     ax.add_patch(
@@ -60,10 +77,12 @@ def _draw_pitch(
     # Halfway line
     ax.plot([0.5, 0.5], [0, 1], color=line_colour, lw=lw, zorder=2)
 
-    # Centre circle (radius = 9.15 m / 105 m ≈ 0.0871 normalised)
+    # Centre circle (radius = 9.15 m)
     ax.add_patch(
-        plt.Circle((0.5, 0.5), 9.15 / _PITCH_LENGTH, color=line_colour,
-                   fill=False, lw=lw, zorder=2)
+        mpatches.Ellipse(
+            (0.5, 0.5), 2 * _rx(9.15), 2 * _ry(9.15),
+            color=line_colour, fill=False, lw=lw, zorder=2,
+        )
     )
     ax.plot(0.5, 0.5, "o", color=line_colour, ms=3, zorder=3)
 
@@ -112,16 +131,16 @@ def _draw_pitch(
     ax.plot(1.0 - penalty_x, 0.5, "o", color=line_colour, ms=3, zorder=3)
     ax.plot(penalty_x, 0.5, "o", color=line_colour, ms=3, zorder=3)
 
-    # Penalty arcs (radius = 9.15 m, centre at penalty spot)
-    for spot_x, arc_start, arc_end in [
+    # Penalty arcs (radius = 9.15 m, centre at penalty spot).
+    # Drawn as arc segments of an Ellipse to respect the aspect-ratio scaling.
+    for spot_x, theta1, theta2 in [
         (1.0 - penalty_x, -53, 53),
         (penalty_x, 127, 233),
     ]:
-        theta = np.linspace(np.radians(arc_start), np.radians(arc_end), 60)
-        r = 9.15 / _PITCH_LENGTH
-        arc_x = spot_x + r * np.cos(theta)
-        arc_y = 0.5 + r * np.sin(theta)
-        # Clip to outside penalty area only
+        theta = np.linspace(np.radians(theta1), np.radians(theta2), 80)
+        arc_x = spot_x + _rx(9.15) * np.cos(theta)
+        arc_y = 0.5 + _ry(9.15) * np.sin(theta)
+        # Clip to outside the penalty area
         if spot_x > 0.5:
             mask = arc_x <= (1.0 - box_depth)
         else:
@@ -160,7 +179,10 @@ def plot_coordinate_system(output_dir: Path) -> None:
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    fig, ax = plt.subplots(figsize=(13, 7.5))
+    # Figure height chosen so the pitch body renders at 105:68 proportions.
+    _fig_w = 14.0
+    _fig_h = _fig_w / _ASPECT_RATIO
+    fig, ax = plt.subplots(figsize=(_fig_w, _fig_h))
     _draw_pitch(ax)
 
     # Axis tick configuration
@@ -226,10 +248,12 @@ def plot_coordinate_system(output_dir: Path) -> None:
 def plot_distance_angle_schematic(output_dir: Path) -> None:
     """
     Saves a two-panel pitch diagram with example shots annotated to illustrate
-    how distance and angle to goal are computed.
+    how distance and angle to goal are computed.  Panels are stacked
+    vertically so each pitch renders at the correct 105:68 aspect ratio
+    with no label overlap.
 
     Distance: Euclidean from shot coords to goal centre.
-    Angle: arccos of the dot product of vectors to each goalpost.
+    Angle: arctan of cross/dot product of vectors to each goalpost.
 
     Args:
         output_dir: Directory into which the figure is saved.
@@ -242,7 +266,10 @@ def plot_distance_angle_schematic(output_dir: Path) -> None:
     ]
     shot_colours = ["#00BFFF", "#FF6347"]
 
-    fig, axes = plt.subplots(1, 2, figsize=(18, 7.5))
+    # Each panel width is the full figure width; height preserves 105:68 ratio.
+    _panel_w = 12.0
+    _panel_h = _panel_w / _ASPECT_RATIO
+    fig, axes = plt.subplots(2, 1, figsize=(_panel_w, _panel_h * 2))
     fig.patch.set_facecolor("#1a1a2e")
 
     gx, gy = _GOAL_CENTER
@@ -257,25 +284,31 @@ def plot_distance_angle_schematic(output_dir: Path) -> None:
         # Compute distance
         dist = np.hypot(sx - gx, sy - gy)
 
-        # Compute angle
+        # Compute angle via cross/dot product of goalpost vectors
         v1x, v1y = gp1x - sx, gp1y - sy
         v2x, v2y = gp2x - sx, gp2y - sy
         dot = v1x * v2x + v1y * v2y
-        cross = abs(v1x * v2y - v1y * v2x)  # magnitude of cross product
+        cross = abs(v1x * v2y - v1y * v2x)
         angle_rad = np.arctan2(cross, dot)
         angle_deg = np.degrees(angle_rad)
 
-        # Distance line from shot to goal centre
+        # Distance dashed line from shot to goal centre
         ax.plot([sx, gx], [sy, gy], "--", color=colour, lw=2, zorder=5)
+
+        # Distance label: placed along the midpoint, offset upward for Shot A
+        # and downward for Shot B to avoid overlapping the pitch elements.
         mid_x = (sx + gx) / 2
         mid_y = (sy + gy) / 2
+        d_label_offset = 0.055 if sy >= 0.5 else -0.055
         ax.text(
-            mid_x - 0.06,
-            mid_y + 0.035,
+            mid_x,
+            mid_y + d_label_offset,
             f"d = {dist:.3f}",
             color=colour,
             fontsize=9,
             fontweight="bold",
+            ha="center",
+            va="center",
             zorder=6,
         )
 
@@ -289,26 +322,38 @@ def plot_distance_angle_schematic(output_dir: Path) -> None:
             color=colour, ms=11, zorder=7,
             markeredgecolor="white", markeredgewidth=1.5,
         )
-        ax.text(sx, sy - 0.06, shot["label"], color=colour, fontsize=8.5,
-                fontweight="bold", ha="center", zorder=8)
 
-        # Angle annotation box
+        # Shot label: above for central shot (clear of goal), below for wide shot
+        label_offset = 0.07 if sy >= 0.5 else -0.07
+        label_va = "bottom" if sy >= 0.5 else "top"
+        ax.text(
+            sx, sy + label_offset,
+            shot["label"],
+            color=colour, fontsize=8.5,
+            fontweight="bold", ha="center", va=label_va, zorder=8,
+        )
+
+        # Angle annotation box: placed well left of the shot point to avoid
+        # overlapping the goal triangle.
         angle_text = (
             f"θ = {angle_deg:.1f}°\n"
             f"({angle_rad:.3f} rad)"
         )
-        text_y = sy + 0.07 if sy < 0.5 else sy - 0.12
+        angle_box_x = sx - 0.20
+        angle_box_y = sy + 0.09 if sy < 0.5 else sy - 0.05
         ax.text(
-            sx - 0.14, text_y,
+            angle_box_x, angle_box_y,
             angle_text,
             color="#FFD700",
             fontsize=9,
             fontweight="bold",
+            ha="center",
+            va="bottom" if sy < 0.5 else "top",
             bbox=dict(boxstyle="round,pad=0.35", fc="#1a1a2e", ec="#FFD700", alpha=0.88),
             zorder=9,
         )
 
-        # Formula inset
+        # Formula inset: top-left corner of each panel
         formula = (
             r"$d = \sqrt{(X-1)^2 + (Y-0.5)^2}$"
             "\n"
@@ -322,22 +367,24 @@ def plot_distance_angle_schematic(output_dir: Path) -> None:
             va="top",
             color="white",
             bbox=dict(boxstyle="round,pad=0.4", fc="#1a1a2e", ec="white", alpha=0.75),
+            zorder=10,
         )
 
         ax.set_title(
             shot["label"],
-            fontsize=10,
+            fontsize=11,
             fontweight="bold",
             color="white",
-            pad=10,
+            pad=8,
         )
         ax.set_xticks([])
         ax.set_yticks([])
 
     fig.suptitle(
         "Distance & Angle Features  ·  Normalised Coordinate System",
-        fontsize=13, fontweight="bold", color="white", y=1.01,
+        fontsize=14, fontweight="bold", color="white", y=1.005,
     )
+    plt.tight_layout(h_pad=2.0)
 
     output_path = output_dir / "distance_angle_schematic.png"
     fig.savefig(output_path, dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())

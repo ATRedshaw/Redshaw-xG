@@ -2,14 +2,19 @@
 xG predictive power analysis.
 
 Tests whether accumulated past xG (or goals) over a rolling window
-predicts future goals in a subsequent rolling window.  Pearson and
-Spearman correlations are computed for every predictor/window
-combination, with Bonferroni-corrected significance thresholds.
+predicts future goals in a subsequent rolling window.  Pearson correlation
+and Bonferroni-corrected significance thresholds are used throughout.
 
-Produces:
-  - Correlation heatmap  (predictors x window sizes)
-  - Scatter panels with regression lines (representative window)
-  - Residual diagnostics for the best predictor
+Produces per future window [2, 8, 16]:
+  - Pearson correlation heatmap  (predictors x past-window sizes)
+  - Predictor stability comparison chart across past-window sizes
+
+Produces once (representative window: past=8, future=8):
+  - Scatter panels with OLS regression lines for all predictors
+
+Produces one combined chart:
+  - xG (Advanced) vs. Goals head-to-head Pearson r across all future windows
+
   - Statistical summary CSV
 """
 
@@ -26,6 +31,8 @@ import seaborn as sns
 import statsmodels.api as sm
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+# statsmodels is retained for OLS p-values; sklearn provides predictions.
 
 from analysis.data_aggregation import create_lagged_features, create_player_match_stats
 
@@ -47,10 +54,18 @@ _PREDICTOR_LABELS = {
     "past_xg_advanced": "Past xG (Advanced)",
 }
 
-_WINDOWS = [1, 2, 4, 8, 16, 32, 64]
+# Past lookback window sizes — capped at 32 matches.
+_PAST_WINDOWS = [1, 2, 4, 8, 16, 32]
 
-# Representative window for scatter and residual panels
+# Future target windows: goals scored in the next N matches.
+_FUTURE_WINDOWS = [2, 8, 16]
+
+# Keep _WINDOWS as an alias used by heatmap/pivot helpers
+_WINDOWS = _PAST_WINDOWS
+
+# Representative windows for scatter panels (balanced past/future view).
 _REPRESENTATIVE_WINDOW = 8
+_REPRESENTATIVE_FUTURE_WINDOW = 8
 
 _COLOURS = {
     "past_goals": "#888888",
@@ -60,14 +75,19 @@ _COLOURS = {
     "past_xg_advanced": "#C44E52",
 }
 
+# Expose a single _FUTURE_WINDOW alias so heatmap title helpers still work.
+# This is set dynamically per iteration in run_xg_prediction_analysis but
+# has a sensible default here for standalone use.
+_FUTURE_WINDOW = _REPRESENTATIVE_FUTURE_WINDOW
+
 
 # --- Core regression -------------------------------------------------------
 
 def run_linear_regressions(lagged_df: pd.DataFrame) -> list[dict]:
     """
     Fits a separate OLS linear regression for each predictor against
-    ``future_goals``, returning Pearson and Spearman correlations alongside
-    standard regression diagnostics.
+    ``future_goals``, returning Pearson correlation alongside standard
+    regression diagnostics.
 
     Args:
         lagged_df: DataFrame with rolling-window predictor columns and
@@ -75,10 +95,10 @@ def run_linear_regressions(lagged_df: pd.DataFrame) -> list[dict]:
 
     Returns:
         List of result dicts, one per predictor.  Dicts contain keys
-        ``predictor``, ``Pearson Correlation``, ``Spearman Correlation``,
-        ``P-value (Coefficient)``, ``Spearman P-value``, ``R-squared``,
-        ``MAE``, ``RMSE``, ``Coefficient``, ``Intercept``, ``data`` and
-        ``predictions``.  On failure, a ``note`` key is included instead.
+        ``predictor``, ``Pearson Correlation``, ``Pearson P-value``,
+        ``P-value (Coefficient)``, ``R-squared``, ``MAE``, ``RMSE``,
+        ``Coefficient``, ``Intercept``, ``data`` and ``predictions``.
+        On failure, a ``note`` key is included instead.
     """
     results = []
 
@@ -98,9 +118,6 @@ def run_linear_regressions(lagged_df: pd.DataFrame) -> list[dict]:
         # Pearson correlation
         pearson_r, pearson_p = stats.pearsonr(X.squeeze(), y)
 
-        # Spearman rank correlation
-        spearman_r, spearman_p = stats.spearmanr(X.squeeze(), y)
-
         # OLS via statsmodels for p-value on the coefficient
         X_sm = sm.add_constant(X)
         sm_res = sm.OLS(y, X_sm).fit()
@@ -115,8 +132,6 @@ def run_linear_regressions(lagged_df: pd.DataFrame) -> list[dict]:
             "predictor": predictor,
             "Pearson Correlation": pearson_r,
             "Pearson P-value": pearson_p,
-            "Spearman Correlation": spearman_r,
-            "Spearman P-value": spearman_p,
             "P-value (Coefficient)": coeff_p,
             "R-squared": r2_score(y, y_pred),
             "MAE": mean_absolute_error(y, y_pred),
@@ -135,18 +150,19 @@ def run_linear_regressions(lagged_df: pd.DataFrame) -> list[dict]:
 def plot_correlation_heatmap(
     summary_df: pd.DataFrame,
     output_dir: Path,
+    future_window: int,
     metric: str = "Pearson Correlation",
 ) -> None:
     """
-    Saves a heatmap of the chosen correlation metric across all
-    predictor/window combinations, with Bonferroni-corrected significance
-    indicated by asterisks.
+    Saves a Pearson correlation heatmap across all predictor/past-window
+    combinations for a given future target window, with Bonferroni-corrected
+    significance indicated by asterisks.
 
     Args:
         summary_df: DataFrame with columns ``predictor``, ``window_size``,
-            ``Pearson Correlation``, ``Pearson P-value``,
-            ``Spearman Correlation``, ``Spearman P-value``.
+            ``Pearson Correlation`` and ``Pearson P-value``.
         output_dir: Directory into which the figure is saved.
+        future_window: Number of future matches used as the target (for title).
         metric: Column name to use as the heatmap values.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -158,7 +174,7 @@ def plot_correlation_heatmap(
     pivot = pivot.reindex(index=_PREDICTORS, columns=_WINDOWS)
     pivot.index = [_PREDICTOR_LABELS.get(p, p) for p in pivot.index]
 
-    # Significance mask (True where p > Bonferroni threshold)
+    # Significance pivot
     p_col = metric.replace("Correlation", "P-value")
     pivot_p = summary_df.pivot(index="predictor", columns="window_size", values=p_col)
     pivot_p = pivot_p.reindex(index=_PREDICTORS, columns=_WINDOWS)
@@ -213,17 +229,17 @@ def plot_correlation_heatmap(
                 )
 
     ax.set_title(
-        f"{metric} — Past Predictor vs. Future Goals\n"
+        f"{metric} — Past Predictor (varying window) vs. Next {future_window} Matches' Goals\n"
         f"* = Bonferroni-significant (α/n = {bonferroni_threshold:.4f})",
         fontsize=12, fontweight="bold", pad=12,
     )
-    ax.set_xlabel("Rolling Window Size (matches)", fontsize=11)
+    ax.set_xlabel("Past Rolling Window Size (matches)", fontsize=11)
     ax.set_ylabel("")
     ax.tick_params(axis="y", rotation=0)
 
     plt.tight_layout()
     metric_slug = metric.lower().replace(" ", "_")
-    output_path = output_dir / f"correlation_heatmap_{metric_slug}.png"
+    output_path = output_dir / f"correlation_heatmap_future{future_window}_{metric_slug}.png"
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"  Saved: {output_path}")
@@ -233,15 +249,17 @@ def plot_regression_scatter_panels(
     results: list[dict],
     window_size: int,
     output_dir: Path,
+    future_window: int = _REPRESENTATIVE_FUTURE_WINDOW,
 ) -> None:
     """
     Saves a grid of scatter plots with OLS regression lines, one per
-    predictor, for a given rolling window size.
+    predictor, for a given past and future rolling window size.
 
     Args:
         results: Output of ``run_linear_regressions`` for this window.
-        window_size: The window size used (appears in the figure title).
+        window_size: The past window size used (appears in the figure title).
         output_dir: Directory into which the figure is saved.
+        future_window: The future target window used (appears in the title).
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -262,7 +280,8 @@ def plot_regression_scatter_panels(
     axes_flat = axes.flatten()
 
     fig.suptitle(
-        f"Linear Regression: Predicting Future Goals  ·  Window = {window_size} matches",
+        f"Linear Regression: Predicting Goals in Next {future_window} Matches  "
+        f"·  Past Window = {window_size} matches",
         fontsize=15, fontweight="bold",
     )
 
@@ -301,12 +320,11 @@ def plot_regression_scatter_panels(
             fontsize=11, fontweight="medium",
         )
         ax.set_xlabel(predictor, fontsize=9)
-        ax.set_ylabel("Future Goals", fontsize=9)
+        ax.set_ylabel(f"Goals in Next {future_window} Matches", fontsize=9)
         ax.legend(fontsize=8)
 
         stats_text = (
             f"Pearson r = {result['Pearson Correlation']:.3f}\n"
-            f"Spearman ρ = {result['Spearman Correlation']:.3f}\n"
             f"R² = {result['R-squared']:.4f}"
         )
         ax.text(
@@ -326,149 +344,122 @@ def plot_regression_scatter_panels(
     print(f"  Saved: {output_path}")
 
 
-def plot_residual_diagnostics(
-    result: dict,
-    window_size: int,
+def plot_predictor_comparison_panel(
+    summary_df: pd.DataFrame,
     output_dir: Path,
+    future_window: int = _REPRESENTATIVE_FUTURE_WINDOW,
 ) -> None:
     """
-    Saves a four-panel residual diagnostic figure for a single predictor,
-    comprising a residuals-vs-fitted plot, Q-Q plot, residual histogram and
-    scale-location plot.
+    Saves a single line chart showing how Pearson correlation for each
+    predictor changes across past rolling window sizes for a fixed future
+    target window.  The legend is placed in the lower-right corner to avoid
+    overlap with rising curves.
 
     Args:
-        result: Single predictor result dict from ``run_linear_regressions``.
-        window_size: The window size used (appears in the figure title).
+        summary_df: Aggregated results DataFrame with all window/predictor rows.
         output_dir: Directory into which the figure is saved.
+        future_window: The future target window size (used in title and filename).
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    predictor = result["predictor"]
-    y_true = result["data"]["future_goals"].values
-    y_pred = result["predictions"]
-    residuals = y_true - y_pred
-    std_resid = residuals / (residuals.std() + 1e-9)
+    fig, ax = plt.subplots(figsize=(10, 5.5))
 
-    fig, axes = plt.subplots(2, 2, figsize=(12, 9))
-    colour = _COLOURS.get(predictor, "#4C72B0")
+    for predictor in _PREDICTORS:
+        subset = summary_df[summary_df["predictor"] == predictor].sort_values("window_size")
+        if subset.empty:
+            continue
+        ax.plot(
+            subset["window_size"],
+            subset["Pearson Correlation"],
+            marker="o",
+            markersize=5,
+            lw=2,
+            color=_COLOURS.get(predictor, "#888"),
+            label=_PREDICTOR_LABELS.get(predictor, predictor),
+        )
 
-    # 1. Residuals vs. Fitted
-    ax = axes[0, 0]
-    ax.scatter(y_pred, residuals, alpha=0.25, s=15, color=colour, edgecolors="none")
-    ax.axhline(0, color="#d62728", lw=1.5, linestyle="--")
-    ax.set_xlabel("Fitted Values", fontsize=10)
-    ax.set_ylabel("Residuals", fontsize=10)
-    ax.set_title("Residuals vs. Fitted", fontsize=11, fontweight="bold")
+    ax.axhline(0, color="#888", lw=0.8, linestyle="--")
+    ax.set_xlabel("Past Rolling Window Size (matches)", fontsize=11)
+    ax.set_ylabel("Pearson r", fontsize=11)
+    ax.set_title("Pearson r", fontsize=12, fontweight="bold")
+    # Legend placed in the lower-right so it does not overlap the upward-
+    # trending correlation curves that cluster in the top portion.
+    ax.legend(fontsize=9, loc="lower right", framealpha=0.9)
     ax.grid(linestyle="--", alpha=0.4)
-
-    # 2. Q-Q plot
-    ax = axes[0, 1]
-    (osm, osr), (slope, intercept, _) = stats.probplot(residuals, dist="norm")
-    ax.scatter(osm, osr, alpha=0.3, s=15, color=colour, edgecolors="none")
-    qq_line_x = np.array([min(osm), max(osm)])
-    ax.plot(qq_line_x, slope * qq_line_x + intercept, color="#d62728", lw=1.5)
-    ax.set_xlabel("Theoretical Quantiles", fontsize=10)
-    ax.set_ylabel("Sample Quantiles", fontsize=10)
-    ax.set_title("Q-Q Plot  (Normality Check)", fontsize=11, fontweight="bold")
-    ax.grid(linestyle="--", alpha=0.4)
-
-    # 3. Histogram of residuals
-    ax = axes[1, 0]
-    ax.hist(residuals, bins=40, color=colour, edgecolor="white", alpha=0.8)
-    x_range = np.linspace(residuals.min(), residuals.max(), 200)
-    pdf = stats.norm.pdf(x_range, residuals.mean(), residuals.std())
-    ax2 = ax.twinx()
-    ax2.plot(x_range, pdf, color="#d62728", lw=1.8, label="Normal PDF")
-    ax2.set_ylabel("Density", fontsize=9, color="#d62728")
-    ax2.tick_params(axis="y", colors="#d62728")
-    ax.set_xlabel("Residual", fontsize=10)
-    ax.set_ylabel("Count", fontsize=10)
-    ax.set_title("Residual Distribution", fontsize=11, fontweight="bold")
-    ax.grid(linestyle="--", alpha=0.4, axis="y")
-
-    # 4. Scale-location plot (√|std residuals| vs. fitted)
-    ax = axes[1, 1]
-    sqrt_abs_resid = np.sqrt(np.abs(std_resid))
-    ax.scatter(y_pred, sqrt_abs_resid, alpha=0.25, s=15, color=colour, edgecolors="none")
-    # Lowess smoothing line
-    try:
-        smoothed = sm.nonparametric.lowess(sqrt_abs_resid, y_pred, frac=0.3)
-        ax.plot(smoothed[:, 0], smoothed[:, 1], color="#d62728", lw=1.8, label="LOWESS")
-        ax.legend(fontsize=9)
-    except Exception:  # noqa: BLE001
-        pass
-    ax.set_xlabel("Fitted Values", fontsize=10)
-    ax.set_ylabel("√|Standardised Residuals|", fontsize=10)
-    ax.set_title("Scale-Location", fontsize=11, fontweight="bold")
-    ax.grid(linestyle="--", alpha=0.4)
+    ax.xaxis.set_major_locator(ticker.FixedLocator(_PAST_WINDOWS))
 
     fig.suptitle(
-        f"Residual Diagnostics — {_PREDICTOR_LABELS.get(predictor, predictor)}"
-        f"  ·  Window = {window_size} matches",
-        fontsize=13, fontweight="bold",
+        f"Predictor Stability Across Past Window Sizes  "
+        f"·  Target = Goals in Next {future_window} Matches",
+        fontsize=14, fontweight="bold",
     )
-
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
-    output_path = output_dir / f"residual_diagnostics_{predictor}_window_{window_size}.png"
+    plt.tight_layout()
+    output_path = output_dir / f"predictor_comparison_future{future_window}.png"
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"  Saved: {output_path}")
 
 
-def plot_predictor_comparison_panel(
-    summary_df: pd.DataFrame,
+def plot_xg_vs_goals_headtohead(
+    all_summary_df: pd.DataFrame,
     output_dir: Path,
 ) -> None:
     """
-    Saves a line chart showing how Pearson and Spearman correlations for
-    each predictor change across rolling window sizes, making it easy to
-    assess whether xG metrics stabilise faster than raw goals.
+    Saves a faceted line chart comparing Pearson r for ``past_xg_advanced``
+    and ``past_goals`` across all past window sizes, with one subplot per
+    future target window.
+
+    The chart is the primary evidence that xG is a better predictor of
+    future scoring than raw goals in most circumstances.
 
     Args:
-        summary_df: Aggregated results DataFrame with all window/predictor rows.
+        all_summary_df: Combined summary DataFrame with a ``future_window``
+            column and rows for all future/past window combinations.
         output_dir: Directory into which the figure is saved.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5.5), sharey=False)
+    focus = ["past_goals", "past_xg_advanced"]
+    future_windows = sorted(all_summary_df["future_window"].unique())
+    n_panels = len(future_windows)
 
-    for ax, (metric, label) in zip(
-        axes,
-        [
-            ("Pearson Correlation", "Pearson r"),
-            ("Spearman Correlation", "Spearman ρ"),
-        ],
-    ):
-        for predictor in _PREDICTORS:
-            subset = summary_df[summary_df["predictor"] == predictor].sort_values("window_size")
-            if subset.empty:
+    fig, axes = plt.subplots(1, n_panels, figsize=(n_panels * 6, 5), sharey=True)
+    if n_panels == 1:
+        axes = [axes]
+
+    for ax, fw in zip(axes, future_windows):
+        subset_fw = all_summary_df[all_summary_df["future_window"] == fw]
+        for predictor in focus:
+            sub = subset_fw[subset_fw["predictor"] == predictor].sort_values("window_size")
+            if sub.empty:
                 continue
             ax.plot(
-                subset["window_size"],
-                subset[metric],
+                sub["window_size"],
+                sub["Pearson Correlation"],
                 marker="o",
-                markersize=5,
-                lw=2,
-                color=_COLOURS.get(predictor, "#888"),
-                label=_PREDICTOR_LABELS.get(predictor, predictor),
+                markersize=6,
+                lw=2.2,
+                color=_COLOURS[predictor],
+                label=_PREDICTOR_LABELS[predictor],
             )
 
-        ax.axhline(0, color="#888", lw=0.8, linestyle="--")
-        ax.set_xlabel("Rolling Window Size (matches)", fontsize=11)
-        ax.set_ylabel(label, fontsize=11)
-        ax.set_title(label, fontsize=12, fontweight="bold")
-        ax.legend(fontsize=8, loc="upper left")
+        ax.axhline(0, color="#aaa", lw=0.8, linestyle="--")
+        ax.set_title(f"Next {fw} Matches", fontsize=12, fontweight="bold")
+        ax.set_xlabel("Past Window (matches)", fontsize=10)
+        if ax is axes[0]:
+            ax.set_ylabel("Pearson r", fontsize=11)
+        ax.legend(fontsize=9, loc="lower right", framealpha=0.9)
         ax.grid(linestyle="--", alpha=0.4)
-        ax.xaxis.set_major_locator(
-            ticker.FixedLocator(_WINDOWS)
-        )
+        ax.xaxis.set_major_locator(ticker.FixedLocator(_PAST_WINDOWS))
 
     fig.suptitle(
-        "Predictor Stability Across Rolling Window Sizes",
-        fontsize=14, fontweight="bold",
+        "xG (Advanced) vs. Past Goals as Predictors of Future Scoring\n"
+        "Higher Pearson r = stronger predictor  ·  Past window varies, "
+        "future target window shown per panel",
+        fontsize=13, fontweight="bold",
     )
     plt.tight_layout()
-    output_path = output_dir / "predictor_comparison_by_window.png"
+    output_path = output_dir / "xg_vs_goals_headtohead.png"
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"  Saved: {output_path}")
@@ -498,15 +489,14 @@ def save_statistical_summary(
     df["predictor_label"] = df["predictor"].map(_PREDICTOR_LABELS)
 
     col_order = [
-        "window_size", "predictor", "predictor_label",
+        "future_window", "window_size", "predictor", "predictor_label",
         "Pearson Correlation", "Pearson P-value",
-        "Spearman Correlation", "Spearman P-value",
         "R-squared", "MAE", "RMSE",
         "Coefficient", "Intercept",
         "bonferroni_significant",
     ]
     df = df[[c for c in col_order if c in df.columns]]
-    df = df.sort_values(["window_size", "predictor"])
+    df = df.sort_values([c for c in ["future_window", "window_size", "predictor"] if c in df.columns])
 
     output_path = output_dir / "xg_prediction_statistical_summary.csv"
     df.to_csv(output_path, index=False, float_format="%.6f")
@@ -518,19 +508,30 @@ def save_correlation_pivot(summary_df: pd.DataFrame, output_dir: Path) -> None:
     Saves Pearson correlation pivots (predictors x windows) to CSV.
 
     Args:
-        summary_df: Aggregated results DataFrame.
+        summary_df: Aggregated results DataFrame (may include a ``future_window`` column).
         output_dir: Directory into which the CSV is saved.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    for metric in ("Pearson Correlation", "Spearman Correlation"):
+    # If multiple future windows are present, write one pivot per future window.
+    if "future_window" in summary_df.columns:
+        for fw in sorted(summary_df["future_window"].unique()):
+            sub = summary_df[summary_df["future_window"] == fw]
+            pivot = (
+                sub.pivot(index="predictor", columns="window_size", values="Pearson Correlation")
+                .reindex(index=_PREDICTORS, columns=_WINDOWS)
+            )
+            pivot.index = [_PREDICTOR_LABELS.get(p, p) for p in pivot.index]
+            path = output_dir / f"correlation_pivot_pearson_future{fw}.csv"
+            pivot.to_csv(path, float_format="%.4f")
+            print(f"  Saved: {path}")
+    else:
         pivot = (
-            summary_df.pivot(index="predictor", columns="window_size", values=metric)
+            summary_df.pivot(index="predictor", columns="window_size", values="Pearson Correlation")
             .reindex(index=_PREDICTORS, columns=_WINDOWS)
         )
         pivot.index = [_PREDICTOR_LABELS.get(p, p) for p in pivot.index]
-        slug = metric.lower().replace(" ", "_")
-        path = output_dir / f"correlation_pivot_{slug}.csv"
+        path = output_dir / "correlation_pivot_pearson_correlation.csv"
         pivot.to_csv(path, float_format="%.4f")
         print(f"  Saved: {path}")
 
@@ -544,8 +545,12 @@ def run_xg_prediction_analysis(
     """
     Orchestrates the full xG predictive power analysis.
 
-    Runs rolling-window regressions for every predictor/window combination,
-    produces all visualisations and saves summary tables.
+    Iterates over all combinations of past rolling windows (1–32) and
+    future target windows (2, 8, 16).  For each future window a Pearson
+    heatmap and predictor stability chart are produced.  Scatter panels are
+    produced for the representative combination (past=8, future=8).  A
+    combined head-to-head chart (xG Advanced vs. Goals) across all future
+    windows is saved as the primary evidence plot.
 
     Args:
         project_root: Absolute path to the backend project root.
@@ -560,67 +565,83 @@ def run_xg_prediction_analysis(
 
     all_summary_rows: list[dict] = []
 
-    for window in _WINDOWS:
-        print(f"  Window = {window} ...")
-        lagged_df = create_lagged_features(player_match_df, window, window)
+    for future_window in _FUTURE_WINDOWS:
+        fw_summary_rows: list[dict] = []
 
-        if lagged_df.empty:
-            print(f"  No data after lagging for window {window}. Skipping.")
+        for past_window in _PAST_WINDOWS:
+            print(f"  Past window = {past_window}, future window = {future_window} ...")
+            lagged_df = create_lagged_features(
+                player_match_df,
+                past_window_size=past_window,
+                future_window_size=future_window,
+            )
+
+            if lagged_df.empty:
+                print(
+                    f"  No data after lagging for past={past_window}, "
+                    f"future={future_window}. Skipping."
+                )
+                continue
+
+            results = run_linear_regressions(lagged_df)
+
+            for r in results:
+                if "note" in r:
+                    continue
+                row = {
+                    "future_window": future_window,
+                    "window_size": past_window,
+                    "predictor": r["predictor"],
+                    "Pearson Correlation": r["Pearson Correlation"],
+                    "Pearson P-value": r["Pearson P-value"],
+                    "R-squared": r["R-squared"],
+                    "MAE": r["MAE"],
+                    "RMSE": r["RMSE"],
+                    "Coefficient": r["Coefficient"],
+                    "Intercept": r["Intercept"],
+                }
+                fw_summary_rows.append(row)
+                all_summary_rows.append(row)
+
+            # Scatter panels for the representative window combination only
+            if (past_window == _REPRESENTATIVE_WINDOW
+                    and future_window == _REPRESENTATIVE_FUTURE_WINDOW):
+                print(
+                    f"  Plotting scatter panels for "
+                    f"past={past_window}, future={future_window}..."
+                )
+                plot_regression_scatter_panels(
+                    results, past_window, output_dir, future_window=future_window,
+                )
+
+        if not fw_summary_rows:
             continue
 
-        results = run_linear_regressions(lagged_df)
+        fw_df = pd.DataFrame(fw_summary_rows)
 
-        for r in results:
-            if "note" in r:
-                continue
-            all_summary_rows.append({
-                "window_size": window,
-                "predictor": r["predictor"],
-                "Pearson Correlation": r["Pearson Correlation"],
-                "Pearson P-value": r["Pearson P-value"],
-                "Spearman Correlation": r["Spearman Correlation"],
-                "Spearman P-value": r["Spearman P-value"],
-                "R-squared": r["R-squared"],
-                "MAE": r["MAE"],
-                "RMSE": r["RMSE"],
-                "Coefficient": r["Coefficient"],
-                "Intercept": r["Intercept"],
-            })
+        print(f"  Plotting Pearson heatmap for future window = {future_window}...")
+        plot_correlation_heatmap(
+            fw_df, output_dir,
+            future_window=future_window,
+            metric="Pearson Correlation",
+        )
 
-        # Scatter panels for the representative window
-        if window == _REPRESENTATIVE_WINDOW:
-            print(f"  Plotting scatter panels for window {window}...")
-            plot_regression_scatter_panels(results, window, output_dir)
-
-            # Residual diagnostics for the best predictor
-            best = next(
-                (r for r in results
-                 if r.get("predictor") == "past_xg_advanced" and "note" not in r),
-                None,
-            )
-            if best:
-                print("  Plotting residual diagnostics for past_xg_advanced...")
-                plot_residual_diagnostics(best, window, output_dir)
+        print(f"  Plotting predictor comparison for future window = {future_window}...")
+        plot_predictor_comparison_panel(fw_df, output_dir, future_window=future_window)
 
     if not all_summary_rows:
         print("  No regression results to aggregate. Skipping remaining outputs.")
         return
 
-    summary_df = pd.DataFrame(all_summary_rows)
+    all_summary_df = pd.DataFrame(all_summary_rows)
 
-    print("  Plotting Pearson correlation heatmap...")
-    plot_correlation_heatmap(summary_df, output_dir, metric="Pearson Correlation")
-
-    print("  Plotting Spearman correlation heatmap...")
-    plot_correlation_heatmap(summary_df, output_dir, metric="Spearman Correlation")
-
-    print("  Plotting predictor comparison panel...")
-    plot_predictor_comparison_panel(summary_df, output_dir)
+    print("  Plotting xG vs Goals head-to-head comparison...")
+    plot_xg_vs_goals_headtohead(all_summary_df, output_dir)
 
     print("  Saving statistical summary table...")
     save_statistical_summary(all_summary_rows, output_dir, len(all_summary_rows))
 
     print("  Saving correlation pivots to CSV...")
-    save_correlation_pivot(summary_df, output_dir)
+    save_correlation_pivot(all_summary_df, output_dir)
 
     print("  xG prediction analysis complete.")
