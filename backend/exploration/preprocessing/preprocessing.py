@@ -1,15 +1,84 @@
-import pandas as pd
-import numpy as np
-from pathlib import Path
-import joblib
+"""
+Data loading and feature engineering utilities for the exploration pipeline.
+
+Provides functions to load raw and preprocessed shot data, engineer model
+features, and apply trained models to generate xG predictions.
+"""
+
+from __future__ import annotations
+
 import json
-from typing import List, Tuple
 import warnings
+from pathlib import Path
+from typing import List, Tuple
+
+import joblib
+import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 # --- Constants ---
+
 GOAL_CENTER = (1.0, 0.5)
 GOAL_POSTS = [(1.0, 0.45), (1.0, 0.55)]
+
+
+# --- Convenience loaders ----------------------------------------------------
+
+def load_raw_data_with_metadata(raw_data_dir: Path) -> pd.DataFrame:
+    """
+    Loads all raw shot CSVs under raw_data_dir, retaining every column
+    (player, match_id, date, league, season, result, etc.).
+
+    Args:
+        raw_data_dir: Path to the ``data/raw`` directory.
+
+    Returns:
+        Combined DataFrame with all columns from every raw file found.
+    """
+    files = list(raw_data_dir.glob("**/*shots_*.csv"))
+    if not files:
+        print(f"Warning: no raw shot files found under {raw_data_dir}.")
+        return pd.DataFrame()
+
+    frames: list[pd.DataFrame] = []
+    for path in tqdm(files, desc="Loading raw data"):
+        try:
+            frames.append(pd.read_csv(path))
+        except Exception as exc:  # noqa: BLE001
+            print(f"Warning: could not read {path}: {exc}")
+
+    if not frames:
+        return pd.DataFrame()
+
+    combined = pd.concat(frames, ignore_index=True)
+    print(f"Loaded {len(combined):,} raw shots from {len(files)} files.")
+    return combined
+
+
+def load_preprocessed_data(project_root: Path) -> pd.DataFrame:
+    """
+    Loads the preprocessed feature matrix produced by the training pipeline.
+
+    Args:
+        project_root: Absolute path to the backend project root.
+
+    Returns:
+        DataFrame with engineered features and the ``target`` column.
+
+    Raises:
+        FileNotFoundError: If the preprocessed CSV does not exist.
+    """
+    path = project_root / "data" / "preprocessed" / "preprocessed_shots.csv"
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Preprocessed data not found at {path}. "
+            "Run the pipeline first."
+        )
+    df = pd.read_csv(path)
+    print(f"Loaded preprocessed data — {len(df):,} rows, {df.shape[1]} columns.")
+    return df
+
 
 # --- Data Loading and Preparation ---
 

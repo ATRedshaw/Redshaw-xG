@@ -105,6 +105,7 @@ requests==2.32.4
 rsa==4.9.1
 scikit-learn==1.6.1
 scipy==1.15.3
+seaborn==0.13.2
 six==1.17.0
 skl2onnx==1.20.0
 sklearn-compat==0.1.3

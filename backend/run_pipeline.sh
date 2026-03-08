@@ -65,4 +65,12 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# Run exploration analysis to regenerate all figures, tables and diagnostics.
+echo "\n=== Running Exploration Analysis ==="
+python exploration/explore.py
+if [ $? -ne 0 ]; then
+    echo "Error: Exploration analysis failed"
+    exit 1
+fi
+
 echo "\n=== Pipeline completed successfully ==="
