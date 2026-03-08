@@ -1,5 +1,5 @@
 scraping:
-  base_url: "https://understat.com/league"
+  base_url: "https://understat.com"
   leagues:
     - EPL
     - La_liga
@@ -8,7 +8,7 @@ scraping:
     - Ligue_1
   seasons:
     start: 2014
-    end: 2025
+    end: 2024
 
 cleansing:
   leagues:
@@ -18,4 +18,4 @@ cleansing:
     - Serie_A
     - Ligue_1
   start_year: 2014
-  end_year: 2025
+  end_year: 2024
