@@ -1,11 +1,11 @@
 {
     "model_name": "advanced_model",
     "model_type": "Logistic Regression",
-    "brier_score": 0.07842072044795786,
+    "brier_score": 0.0784972118283757,
     "best_parameters": {
-        "logreg__C": 0.014272548556901481,
+        "logreg__C": 0.005039387655561005,
         "logreg__penalty": "l1",
-        "logreg__solver": "saga"
+        "logreg__solver": "liblinear"
     },
     "features": [
         "X",
@@ -22,6 +22,7 @@
         "shotType_OtherBodyPart",
         "shotType_RightFoot",
         "interaction_DirectFreekick_LeftFoot",
+        "interaction_DirectFreekick_OtherBodyPart",
         "interaction_DirectFreekick_RightFoot",
         "interaction_FromCorner_Head",
         "interaction_FromCorner_LeftFoot",
@@ -38,5 +39,5 @@
         "interaction_SetPiece_OtherBodyPart",
         "interaction_SetPiece_RightFoot"
     ],
-    "test_set_size": 41223
+    "test_set_size": 106021
 }

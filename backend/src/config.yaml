@@ -8,7 +8,7 @@ scraping:
     - Ligue_1
   seasons:
     start: 2014
-    end: 2024
+    end: 2025
 
 cleansing:
   leagues:
@@ -18,4 +18,4 @@ cleansing:
     - Serie_A
     - Ligue_1
   start_year: 2014
-  end_year: 2024
+  end_year: 2025
