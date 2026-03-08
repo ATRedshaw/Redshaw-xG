@@ -253,7 +253,7 @@ def plot_distance_angle_schematic(output_dir: Path) -> None:
     with no label overlap.
 
     Distance: Euclidean from shot coords to goal centre.
-    Angle: arctan of cross/dot product of vectors to each goalpost.
+    Angle: arccos of normalised dot product of vectors to each goalpost.
 
     Args:
         output_dir: Directory into which the figure is saved.
@@ -284,12 +284,15 @@ def plot_distance_angle_schematic(output_dir: Path) -> None:
         # Compute distance
         dist = np.hypot(sx - gx, sy - gy)
 
-        # Compute angle via cross/dot product of goalpost vectors
+        # Compute angle via normalised dot product of goalpost vectors,
+        # matching the training and inference pipelines.
         v1x, v1y = gp1x - sx, gp1y - sy
         v2x, v2y = gp2x - sx, gp2y - sy
         dot = v1x * v2x + v1y * v2y
-        cross = abs(v1x * v2y - v1y * v2x)
-        angle_rad = np.arctan2(cross, dot)
+        mag_v1 = np.hypot(v1x, v1y)
+        mag_v2 = np.hypot(v2x, v2y)
+        cos_angle = np.clip(dot / (mag_v1 * mag_v2), -1.0, 1.0)
+        angle_rad = np.arccos(cos_angle)
         angle_deg = np.degrees(angle_rad)
 
         # Distance dashed line from shot to goal centre
@@ -357,7 +360,7 @@ def plot_distance_angle_schematic(output_dir: Path) -> None:
         formula = (
             r"$d = \sqrt{(X-1)^2 + (Y-0.5)^2}$"
             "\n"
-            r"$\theta = \arctan\!\left(\frac{\|v_1 \times v_2\|}{v_1 \cdot v_2}\right)$"
+            r"$\theta = \arccos\!\left(\frac{v_1 \cdot v_2}{\|v_1\|\|v_2\|}\right)$"
         )
         ax.text(
             0.02, 0.98,
