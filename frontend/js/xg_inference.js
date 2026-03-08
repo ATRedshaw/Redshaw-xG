@@ -49,7 +49,7 @@ const XG_INFERENCE = (() => {
             'situation_DirectFreekick', 'situation_FromCorner', 'situation_OpenPlay',
             'situation_Penalty', 'situation_SetPiece',
             'shotType_Head', 'shotType_LeftFoot', 'shotType_OtherBodyPart', 'shotType_RightFoot',
-            'interaction_DirectFreekick_LeftFoot', 'interaction_DirectFreekick_RightFoot',
+            'interaction_DirectFreekick_LeftFoot', 'interaction_DirectFreekick_OtherBodyPart', 'interaction_DirectFreekick_RightFoot',
             'interaction_FromCorner_Head', 'interaction_FromCorner_LeftFoot',
             'interaction_FromCorner_OtherBodyPart', 'interaction_FromCorner_RightFoot',
             'interaction_OpenPlay_Head', 'interaction_OpenPlay_LeftFoot',
