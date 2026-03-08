@@ -338,9 +338,10 @@ async function loadHeatmapData() {
     showStatus('Loading heatmap data...', 'loading');
 
     try {
-        // Fetch the full JSON exactly once; subsequent calls reuse the cache.
+        // Fetch the full JSON exactly once; subsequent calls reuse the in-memory value.
+        // cache: 'no-cache' forces revalidation with the server on every page load.
         if (!rawHeatmapJson) {
-            const response = await fetch('data/heatmaps.json');
+            const response = await fetch('data/heatmaps.json', { cache: 'no-cache' });
             if (!response.ok) {
                 throw new Error(`Failed to load heatmaps.json — HTTP ${response.status}`);
             }
